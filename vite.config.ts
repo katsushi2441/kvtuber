@@ -17,6 +17,7 @@ const KVTUBER_ALLOWED_HOSTS = (process.env.KVTUBER_ALLOWED_HOSTS || '')
   .split(',')
   .map((host) => host.trim())
   .filter(Boolean);
+const DEFAULT_ALLOWED_HOSTS = ['exbridge.ddns.net'];
 const PROGRAMS_PATH = join(__dirname, 'storage/programs.json');
 const SCHEDULE_PATH = join(__dirname, 'storage/schedule.json');
 const YOUTUBE_LIVE_PATH = join(__dirname, 'storage/youtube-live.json');
@@ -807,7 +808,9 @@ export default defineConfig({
     host: '0.0.0.0',
     port: KVTUBER_PORT,
     strictPort: true,
-    allowedHosts: KVTUBER_ALLOWED_HOSTS,
+    allowedHosts: Array.from(
+      new Set([...DEFAULT_ALLOWED_HOSTS, ...KVTUBER_ALLOWED_HOSTS]),
+    ),
     watch: {
       usePolling: true,
       interval: 1000,
