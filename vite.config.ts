@@ -352,6 +352,7 @@ function getToken(req: IncomingMessage) {
 function adminControlPlugin() {
   const clients = new Set<ServerResponse>();
   const statusClients = new Set<ServerResponse>();
+  let latestProgramCommand: unknown = null;
   let latestViewerStatus: unknown = {
     phase: 'unknown',
     label: 'viewer未接続',
@@ -386,6 +387,7 @@ function adminControlPlugin() {
       autoplay,
       sentAt: Date.now(),
     };
+    latestProgramCommand = command;
     broadcast(command);
     return {
       clients: clients.size,
@@ -449,6 +451,9 @@ function adminControlPlugin() {
           });
           res.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
           clients.add(res);
+          if (latestProgramCommand) {
+            res.write(`data: ${JSON.stringify(latestProgramCommand)}\n\n`);
+          }
 
           req.on('close', () => {
             clients.delete(res);
@@ -524,6 +529,7 @@ function adminControlPlugin() {
             const command = JSON.parse(rawBody || '{}');
             broadcast({ ...command, sentAt: Date.now() });
             if (command?.type === 'stop') {
+              latestProgramCommand = null;
               broadcastStatus({
                 phase: 'stopped',
                 label: '停止中',
