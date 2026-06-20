@@ -8,10 +8,10 @@ interface AvatarPanelProps {
 }
 
 const AVATAR_IMAGES = {
-  mouth_close_eyes_open: '/avatar/placeholder.svg',
-  mouth_close_eyes_close: '/avatar/placeholder.svg',
-  mouth_open_eyes_open: '/avatar/placeholder.svg',
-  mouth_open_eyes_close: '/avatar/placeholder.svg',
+  mouth_close_eyes_open: '/avatar/kurage_avatar_idle.png',
+  mouth_close_eyes_close: '/avatar/kurage_avatar_idle.png',
+  mouth_open_eyes_open: '/avatar/kurage_avatar_talk_open.png',
+  mouth_open_eyes_close: '/avatar/kurage_avatar_talk_wide.png',
 } as const;
 
 export type AvatarImageKey = keyof typeof AVATAR_IMAGES;
