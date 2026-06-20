@@ -1,8 +1,21 @@
 # Kurage AI VTuber (kvtuber)
 
-`kvtuber` は、ブラウザ上のVTuber viewerを固定して、番組台本・スケジュール・TTS・YouTube Live/RTMP配信に接続するための軽量な配信システムです。
+`kvtuber` は、ブラウザ上のVTuber viewerを固定して、番組台本・スケジュール・TTS・YouTube Live/RTMP配信に接続するためのプロダクト本体です。
 
-このリポジトリには、システムのロジックとサンプル設定だけを置きます。本番の番組台本、配信キー、生成音声、録画データ、独自アバター画像はコミットしません。
+このディレクトリがGit管理するプロダクトルートです。参考用にcloneしたOSSや本番データは同じフォルダ内に置いてもよいですが、Gitには入れません。
+
+## 構成
+
+```text
+kvtuber/
+  src/              viewer、admin、hooks、services
+  scripts/          TTS、YouTube Live/RTMP補助スクリプト
+  public/           再配布できるプレースホルダー素材のみ
+  storage.sample/   番組・スケジュール・YouTube Live設定のサンプル
+  storage/          本番番組や配信設定、Git除外
+  Open-LLM-VTuber/  参考用clone、Git除外
+  aituber-onair/    参考用clone、Git除外
+```
 
 ## 主な機能
 
@@ -29,6 +42,12 @@ npm run dev -- --host 0.0.0.0 --port 18308
 http://localhost:18308/viewer?broadcast=1
 ```
 
+## 参考OSSの扱い
+
+`Open-LLM-VTuber/` と `aituber-onair/` は、ローカルの参考・実験用として置けます。ただしプロダクトのGit履歴には入れません。
+
+`kvtuber` は npm dependency として `@aituber-onair/core` を使います。ローカルの `aituber-onair/` フォルダは参考・検証用です。
+
 ## データ境界
 
 Gitに入れるもの:
@@ -41,6 +60,8 @@ Gitに入れるもの:
 Gitに入れないもの:
 
 - `storage/` の本番番組データ
+- `Open-LLM-VTuber/`
+- `aituber-onair/`
 - YouTube/RTMPの配信キー
 - `.env` と秘密情報
 - 生成した音声・動画・スクリーンショット

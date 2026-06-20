@@ -13,7 +13,7 @@ import type {
 
 type ApiKeyProvider = Exclude<ChatProviderOption, 'gemini-nano'>;
 
-const STORAGE_KEY = 'kurage-aituber-onair-settings';
+const STORAGE_KEY = 'kvtuber-settings';
 const DEFAULT_AIVIS_CLOUD_MODEL_UUID = '22e8ed77-94fe-4ef2-871f-a86f94e9a579';
 const DEFAULT_GEMINI_TTS_MODEL = 'gemini-3.1-flash-tts-preview';
 const DEFAULT_GEMINI_TTS_LANGUAGE_CODE = 'ja-JP';

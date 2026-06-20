@@ -14,3 +14,13 @@ storage/
 *.jpg
 *.jpeg
 coverage/
+
+# Local reference or upstream OSS checkouts used during development.
+Open-LLM-VTuber/
+aituber-onair/
+kurage-aituber-onair/
+
+# Local private assets and generated captures.
+assets/
+recordings/
+outputs/
