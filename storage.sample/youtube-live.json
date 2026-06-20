@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "rtmpUrl": "rtmp://a.rtmp.youtube.com/live2",
+  "streamKey": "",
+  "viewerUrl": "http://127.0.0.1:18308/viewer?broadcast=1",
+  "width": 1280,
+  "height": 720,
+  "fps": 30,
+  "videoBitrate": "2500k",
+  "audioBitrate": "128k",
+  "display": ":98"
+}

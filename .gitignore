@@ -1,0 +1,16 @@
+node_modules/
+dist/
+storage/
+.env
+.env.*
+!.env.sample
+*.local.*
+.DS_Store
+*.log
+*.mp3
+*.mp4
+*.wav
+*.png
+*.jpg
+*.jpeg
+coverage/

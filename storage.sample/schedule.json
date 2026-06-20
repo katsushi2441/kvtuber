@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "items": [
+    {"id": "vibe-coding-intro-10", "programId": "vibe-coding-intro", "time": "10:00"},
+    {"id": "vibe-coding-intro-14", "programId": "vibe-coding-intro", "time": "14:00"}
+  ],
+  "keepYoutubeArchive": false
+}

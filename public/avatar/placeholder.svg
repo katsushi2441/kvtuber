@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Placeholder avatar">
+  <defs>
+    <radialGradient id="body" cx="45%" cy="35%" r="70%">
+      <stop offset="0" stop-color="#a8fff4"/>
+      <stop offset="0.55" stop-color="#42d6df"/>
+      <stop offset="1" stop-color="#117c9e"/>
+    </radialGradient>
+    <linearGradient id="glow" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="none"/>
+  <path d="M109 237c0-91 66-159 149-159s149 68 149 159c0 54-34 83-78 95-38 10-103 10-141 0-45-12-79-41-79-95z" fill="url(#body)"/>
+  <path d="M150 202c12-63 55-98 113-98 45 0 84 23 105 62-43-32-92-42-148-28-32 8-55 28-70 64z" fill="url(#glow)"/>
+  <circle cx="211" cy="234" r="18" fill="#08324a"/>
+  <circle cx="305" cy="234" r="18" fill="#08324a"/>
+  <ellipse cx="258" cy="286" rx="32" ry="13" fill="#0a4059"/>
+  <path d="M156 322c-21 42-19 81 10 116M219 336c-12 53-3 86 27 101M296 336c12 53 3 86-27 101M360 322c21 42 19 81-10 116" fill="none" stroke="#25b7c9" stroke-width="20" stroke-linecap="round"/>
+</svg>

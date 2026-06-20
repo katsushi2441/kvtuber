@@ -1,0 +1,11 @@
+[
+  {
+    "id": "vibe-coding-intro",
+    "title": "Vibe Coding Intro",
+    "description": "Sample scripted AI VTuber program.",
+    "theme": "Teach beginners how to collaborate with AI coding agents.",
+    "topicsText": "Opening: what vibe coding means\nHow to describe goals and constraints\nHow to verify AI-generated changes\nClosing: propose one small practice task",
+    "intervalSeconds": 3,
+    "teacherMode": true
+  }
+]
