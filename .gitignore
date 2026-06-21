@@ -13,6 +13,11 @@ storage/
 *.png
 *.jpg
 *.jpeg
+!public/
+!public/avatar/
+!public/avatar/kurage_avatar_idle.png
+!public/avatar/kurage_avatar_talk_open.png
+!public/avatar/kurage_avatar_talk_wide.png
 coverage/
 
 # Local reference or upstream OSS checkouts used during development.
