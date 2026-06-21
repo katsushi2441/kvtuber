@@ -2201,6 +2201,244 @@ body {
   color: var(--kurage-ink);
 }
 
+.kvtuber-chat-page {
+  background:
+    radial-gradient(circle at 10% 8%, rgba(135, 224, 239, 0.34), transparent 30%),
+    radial-gradient(circle at 92% 0%, rgba(255, 222, 170, 0.45), transparent 34%),
+    linear-gradient(180deg, #ffffff 0%, #f5fbff 55%, #eef9fc 100%);
+  color: var(--kurage-ink);
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.kvtuber-chat-hero {
+  align-items: flex-start;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  margin: 0 auto 22px;
+  max-width: 1380px;
+}
+
+.kvtuber-chat-hero h1 {
+  color: var(--kurage-ink);
+  font-size: clamp(2rem, 4vw, 4.2rem);
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+  margin: 6px 0 12px;
+}
+
+.kvtuber-chat-hero p {
+  color: var(--kurage-muted);
+  font-size: 1rem;
+  line-height: 1.7;
+  max-width: 760px;
+}
+
+.kvtuber-chat-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.kvtuber-chat-nav a {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(7, 138, 166, 0.22);
+  border-radius: 999px;
+  color: var(--kurage-blue);
+  font-size: 0.86rem;
+  font-weight: 900;
+  padding: 10px 14px;
+  text-decoration: none;
+}
+
+.kvtuber-chat-shell {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  margin: 0 auto;
+  max-width: 1380px;
+}
+
+.kvtuber-chat-log,
+.kvtuber-chat-side {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid var(--kurage-line);
+  border-radius: 28px;
+  box-shadow: var(--kurage-shadow);
+}
+
+.kvtuber-chat-log {
+  align-content: start;
+  display: grid;
+  gap: 16px;
+  max-height: calc(100vh - 180px);
+  min-height: 620px;
+  overflow: auto;
+  padding: 24px;
+}
+
+.kvtuber-chat-avatar-card {
+  align-items: center;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255, 222, 170, 0.34), transparent 36%),
+    linear-gradient(135deg, rgba(223, 248, 255, 0.8), rgba(255, 255, 255, 0.92));
+  border: 1px solid rgba(7, 138, 166, 0.15);
+  border-radius: 24px;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  min-height: 180px;
+  overflow: hidden;
+  padding: 18px 22px;
+  position: relative;
+}
+
+.kvtuber-chat-avatar-card .avatar-background {
+  align-items: flex-end;
+  display: flex;
+  height: 260px;
+  inset: auto 6px -44px auto;
+  justify-content: flex-end;
+  opacity: 1;
+  position: absolute;
+  transform: none;
+  width: 320px;
+}
+
+.kvtuber-chat-avatar-card .avatar-container {
+  filter: drop-shadow(0 22px 36px rgba(7, 138, 166, 0.18));
+  height: 260px;
+  width: 320px;
+}
+
+.kvtuber-chat-avatar-card > div:last-child {
+  display: grid;
+  gap: 6px;
+  max-width: calc(100% - 310px);
+  position: relative;
+  z-index: 1;
+}
+
+.kvtuber-chat-avatar-card span {
+  color: var(--kurage-blue);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.kvtuber-chat-avatar-card strong {
+  color: var(--kurage-ink);
+  font-size: clamp(1.4rem, 3vw, 2.4rem);
+  letter-spacing: -0.05em;
+}
+
+.kvtuber-chat-bubble {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  max-width: min(820px, 94%);
+}
+
+.kvtuber-chat-bubble.is-user {
+  justify-self: end;
+  justify-items: end;
+}
+
+.kvtuber-chat-bubble-meta {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.kvtuber-chat-bubble-meta span {
+  color: var(--kurage-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.kvtuber-chat-bubble-meta b {
+  background: var(--kurage-blue-soft);
+  border-radius: 999px;
+  color: var(--kurage-blue);
+  font-size: 0.66rem;
+  padding: 3px 8px;
+}
+
+.kvtuber-chat-bubble p {
+  background: #f7fcff;
+  border: 1px solid rgba(7, 138, 166, 0.16);
+  border-radius: 22px 22px 22px 6px;
+  color: var(--kurage-ink);
+  font-size: 0.96rem;
+  line-height: 1.75;
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding: 16px 18px;
+  white-space: pre-wrap;
+}
+
+.kvtuber-chat-bubble.is-user p {
+  background: linear-gradient(135deg, #078aa6, #27b6d2);
+  border-color: rgba(7, 138, 166, 0.28);
+  border-radius: 22px 22px 6px 22px;
+  color: #ffffff;
+}
+
+.kvtuber-chat-bubble code,
+.kvtuber-chat-status code {
+  background: rgba(7, 138, 166, 0.08);
+  border: 1px solid rgba(7, 138, 166, 0.14);
+  border-radius: 10px;
+  color: var(--kurage-blue);
+  font-size: 0.76rem;
+  overflow-wrap: anywhere;
+  padding: 5px 8px;
+}
+
+.kvtuber-chat-side {
+  align-self: start;
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  position: sticky;
+  top: 22px;
+}
+
+.kvtuber-chat-status {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 222, 170, 0.28), transparent 36%),
+    rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(7, 138, 166, 0.15);
+  border-radius: 20px;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.kvtuber-chat-status span {
+  color: var(--kurage-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.kvtuber-chat-status strong {
+  color: var(--kurage-blue);
+  font-size: 1.2rem;
+}
+
+.kvtuber-chat-input textarea {
+  min-height: 250px;
+}
+
+.kvtuber-chat-send {
+  border-radius: 16px;
+  padding: 15px 18px;
+}
+
 .settings-dialog-overlay {
   background: rgba(232, 247, 252, 0.72);
   backdrop-filter: blur(8px);
@@ -2237,5 +2475,46 @@ body {
 
   .broadcast-viewer-app .chat-message {
     box-shadow: 0 16px 42px rgba(49, 121, 139, 0.16);
+  }
+
+  .kvtuber-chat-page {
+    padding: 18px;
+  }
+
+  .kvtuber-chat-hero,
+  .kvtuber-chat-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .kvtuber-chat-hero {
+    display: grid;
+  }
+
+  .kvtuber-chat-side {
+    position: static;
+  }
+
+  .kvtuber-chat-log {
+    max-height: none;
+    min-height: 420px;
+  }
+
+  .kvtuber-chat-avatar-card {
+    min-height: 150px;
+  }
+
+  .kvtuber-chat-avatar-card .avatar-background {
+    height: 200px;
+    right: -38px;
+    width: 250px;
+  }
+
+  .kvtuber-chat-avatar-card .avatar-container {
+    height: 200px;
+    width: 250px;
+  }
+
+  .kvtuber-chat-avatar-card > div:last-child {
+    max-width: calc(100% - 150px);
   }
 }

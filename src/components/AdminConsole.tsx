@@ -56,26 +56,6 @@ type YoutubeLiveStatus = {
   };
 };
 
-type KdeckJobStatus = {
-  job_id?: string;
-  status?: string;
-  message?: string;
-  error?: string;
-  target_agent?: string;
-  execution_mode?: string;
-  cwd?: string;
-  created?: number;
-  finished?: number;
-};
-
-type KdeckChatMessage = {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  jobId?: string;
-  status?: string;
-};
-
 function getInitialToken() {
   const params = new URLSearchParams(window.location.search);
   return params.get('token') || localStorage.getItem('kurage-admin-token') || '';
@@ -146,22 +126,6 @@ export function AdminConsole() {
   const [scheduleTimesText, setScheduleTimesText] = useState('');
   const [youtubeStreamKeyText, setYoutubeStreamKeyText] = useState('');
   const [commentText, setCommentText] = useState('');
-  const [kdeckChatInput, setKdeckChatInput] = useState(
-    [
-      'kvtuberにブログ投稿を依頼して、kdeckに実行させてみた、という内容でVWork blogに記事を書いて投稿して。',
-      'その作業の流れをkargovで録画して、解説付きのデモ動画にまとめて、kurageに投稿して。',
-      '最後にVWork blogの記事URL、kurage動画URL、実行したcommitを報告して。',
-    ].join('\n'),
-  );
-  const [kdeckChatMessages, setKdeckChatMessages] = useState<KdeckChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content:
-        'kvtuberに相談や作業依頼を入力してください。ブログ投稿、調査、動画制作、ファイル編集など、必要な作業はkdeckへ渡します。',
-    },
-  ]);
-  const [kdeckJob, setKdeckJob] = useState<KdeckJobStatus | null>(null);
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
 
@@ -375,76 +339,6 @@ export function AdminConsole() {
       setCommentText('');
     });
 
-  const sendKdeckChatMessage = () =>
-    runAction('kvtuberチャットを送信', async () => {
-      const message = kdeckChatInput.trim();
-      if (!message) throw new Error('メッセージを入力してください');
-      const userMessage: KdeckChatMessage = {
-        id: `user-${Date.now()}`,
-        role: 'user',
-        content: message,
-      };
-      const nextMessages = [...kdeckChatMessages, userMessage];
-      setKdeckChatMessages(nextMessages);
-      setKdeckChatInput('');
-      const result = await requestWithToken('/control/kdeck/chat', {
-        method: 'POST',
-        body: JSON.stringify({
-          message,
-          history: kdeckChatMessages.map((item) => ({
-            role: item.role,
-            content: item.content,
-          })),
-          executionMode: 'confirm',
-          targetAgent: 'local',
-        }),
-      });
-      if (result.job) {
-        const job = result.job as KdeckJobStatus;
-        setKdeckJob(job);
-        setKdeckChatMessages([
-          ...nextMessages,
-          {
-            id: `assistant-${Date.now()}`,
-            role: 'assistant',
-            content: `kdeckへ依頼しました。Job ID: ${
-              job.job_id || '未取得'
-            }。状態確認ボタンで進行状況を見られます。`,
-            jobId: job.job_id,
-            status: job.status,
-          },
-        ]);
-      }
-    });
-
-  const refreshKdeckJob = () =>
-    runAction('kdeckジョブ状態を確認', async () => {
-      const jobId = kdeckJob?.job_id?.trim();
-      if (!jobId) throw new Error('確認するkdeckジョブがありません');
-      const result = await requestWithToken(
-        `/control/kdeck/task?job_id=${encodeURIComponent(jobId)}`,
-        { method: 'GET' },
-      );
-      if (result.job) {
-        const job = result.job as KdeckJobStatus;
-        setKdeckJob(job);
-        setKdeckChatMessages((current) => [
-          ...current,
-          {
-            id: `assistant-status-${Date.now()}`,
-            role: 'assistant',
-            content: `kdeckジョブを確認しました。状態: ${
-              job.status || '-'
-            }${job.message ? ` / ${job.message}` : ''}${
-              job.error ? ` / エラー: ${job.error}` : ''
-            }`,
-            jobId: job.job_id,
-            status: job.status,
-          },
-        ]);
-      }
-    });
-
   const saveYoutubeLive = () =>
     runAction('YouTube配信設定を保存', async () => {
       const result = await requestWithToken('/control/youtube-live', {
@@ -534,6 +428,9 @@ export function AdminConsole() {
           <p>番組を作って、選んで、普通viewerまたは配信用viewerで開始します。</p>
         </div>
         <div className="admin-viewer-actions">
+          <a className="admin-viewer-link-secondary" href="/chat" target="_blank">
+            kvtuberと対話
+          </a>
           <a className="admin-viewer-link-secondary" href="/viewer" target="_blank">
             普通viewerを開く
           </a>
@@ -928,76 +825,6 @@ export function AdminConsole() {
             <p className="admin-hint">
               返答後は自動で番組台本の続きに戻ります。
             </p>
-          </div>
-
-          <div className="admin-agent-task-panel">
-            <div className="admin-agent-task-header">
-              <h3>kdeckへAI業務依頼</h3>
-              <span className="admin-agent-task-badge">
-                {kdeckJob?.status || '未送信'}
-              </span>
-            </div>
-            <p className="admin-hint">
-              kvtuberと普通にチャットします。作業が必要な依頼はkdeckへAgent Taskとして送ります。
-            </p>
-            <div className="admin-agent-chat-log">
-              {kdeckChatMessages.map((message) => (
-                <div
-                  className={`admin-agent-chat-message is-${message.role}`}
-                  key={message.id}
-                >
-                  <span>{message.role === 'user' ? 'あなた' : 'kvtuber'}</span>
-                  <p>{message.content}</p>
-                </div>
-              ))}
-            </div>
-            <label className="admin-field">
-              <span>kvtuberへの相談・作業依頼</span>
-              <textarea
-                value={kdeckChatInput}
-                rows={5}
-                placeholder="例: VWork blogに記事を書いて投稿し、その流れをkargovで録画して、kurageにデモ動画として投稿して。最後に記事URL、動画URL、commitを報告して。"
-                onChange={(event) => setKdeckChatInput(event.target.value)}
-              />
-            </label>
-            <div className="admin-actions admin-agent-task-actions">
-              <button
-                className="admin-primary"
-                disabled={isSending || !kdeckChatInput.trim()}
-                onClick={sendKdeckChatMessage}
-              >
-                送信
-              </button>
-              <button
-                className="admin-secondary"
-                disabled={isSending || !kdeckJob?.job_id}
-                onClick={refreshKdeckJob}
-              >
-                状態確認
-              </button>
-            </div>
-            {kdeckJob?.job_id && (
-              <div className="admin-agent-task-result">
-                <div>
-                  <span>Job ID</span>
-                  <strong>{kdeckJob.job_id}</strong>
-                </div>
-                <div>
-                  <span>状態</span>
-                  <strong>{kdeckJob.status || '-'}</strong>
-                </div>
-                <div>
-                  <span>実行</span>
-                  <strong>
-                    {kdeckJob.target_agent || 'local'} /{' '}
-                    {kdeckJob.execution_mode || 'confirm'}
-                  </strong>
-                </div>
-                {(kdeckJob.message || kdeckJob.error) && (
-                  <p>{kdeckJob.message || kdeckJob.error}</p>
-                )}
-              </div>
-            )}
           </div>
 
           <details className="admin-token-details">

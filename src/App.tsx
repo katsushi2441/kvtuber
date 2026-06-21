@@ -3,6 +3,7 @@ import { AdminConsole } from './components/AdminConsole';
 import type { AvatarImageKey, AvatarImageUrls } from './components/AvatarPanel';
 import { AutonomousBroadcastPanel } from './components/AutonomousBroadcastPanel';
 import { ChatPanel } from './components/ChatPanel';
+import { KvtuberChatPage } from './components/KvtuberChatPage';
 import { SettingsPanel } from './components/SettingsPanel';
 import { useAudioLipsync } from './hooks/useAudioLipsync';
 import { useAituberCore } from './hooks/useAituberCore';
@@ -740,6 +741,9 @@ export default function App() {
   const path = window.location.pathname;
   if (path === '/admin') {
     return <AdminConsole />;
+  }
+  if (path === '/chat') {
+    return <KvtuberChatPage />;
   }
   return <LiveApp viewerOnly={path !== '/studio'} />;
 }
