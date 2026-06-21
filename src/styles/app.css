@@ -1738,6 +1738,24 @@ body {
   padding: 0 36px 26px 0;
 }
 
+.viewer-app:not(.broadcast-viewer-app) .avatar-background {
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0 34px 24px 0;
+  transform: none;
+}
+
+.viewer-app:not(.broadcast-viewer-app) .avatar-background .avatar-container {
+  width: min(240px, 20vw, 34vh);
+  height: min(240px, 20vw, 34vh);
+  filter: drop-shadow(0 22px 36px rgba(7, 138, 166, 0.18));
+}
+
+.viewer-app:not(.broadcast-viewer-app) .viewer-audio-chip {
+  left: 14px;
+  right: auto;
+}
+
 .broadcast-viewer-app .avatar-background .avatar-container {
   filter: drop-shadow(0 22px 36px rgba(7, 138, 166, 0.18));
 }
