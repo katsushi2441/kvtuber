@@ -450,10 +450,22 @@ body:has(.broadcast-viewer-app),
   white-space: nowrap;
 }
 
+.admin-viewer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .admin-viewer-link-secondary {
   background: rgba(119, 217, 255, 0.14);
   border: 1px solid rgba(119, 217, 255, 0.34);
   color: #eaf6ff;
+  border-radius: 10px;
+  font-weight: 800;
+  padding: 10px 14px;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .admin-grid {

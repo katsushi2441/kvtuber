@@ -27,7 +27,8 @@ Do not use black or dark-mode backgrounds for kvtuber viewer, broadcast viewer, 
 - React/Vite AI VTuber viewer
 - PNG/SVG avatar display and audio-driven lip sync
 - admin console for programs, schedules, and comment interruption
-- dedicated broadcast viewer URL: `/viewer?broadcast=1`
+- normal viewer URL for regular viewing and interaction checks: `/viewer`
+- dedicated broadcast viewer URL for OBS/YouTube capture: `/viewer?broadcast=1`
 - local TTS proxy endpoint compatible with OpenAI-style speech calls
 - YouTube Live RTMP helper using Chrome/Xvfb/ffmpeg
 - storage-driven programs and schedules so genres/content can be added without changing runtime code
@@ -43,8 +44,16 @@ npm run dev -- --host 0.0.0.0 --port 18308
 
 Open:
 
-- admin/app: `http://localhost:18308/`
+- admin: `http://localhost:18308/admin`
+- studio app with settings: `http://localhost:18308/studio`
+- normal viewer: `http://localhost:18308/viewer`
 - broadcast viewer: `http://localhost:18308/viewer?broadcast=1`
+
+Viewer roles:
+
+- `/viewer` is the normal viewer. Use it for ordinary viewing, autonomous talking checks, and non-OBS interaction.
+- `/viewer?broadcast=1` is the fixed broadcast viewer. Use it for OBS, Playwright/browser capture, RTMP, and YouTube Live.
+- `/studio` is the operator-facing app with settings and manual chat controls.
 
 ## Reference Projects
 

@@ -425,15 +425,20 @@ export function AdminConsole() {
         <div>
           <div className="admin-kicker">Kurage Program Manager</div>
           <h1>番組管理</h1>
-          <p>番組を作って、選んで、配信用viewerで開始します。</p>
+          <p>番組を作って、選んで、普通viewerまたは配信用viewerで開始します。</p>
         </div>
-        <a
-          className="admin-viewer-link"
-          href="/viewer?broadcast=1"
-          target="_blank"
-        >
-          配信用viewerを開く
-        </a>
+        <div className="admin-viewer-actions">
+          <a className="admin-viewer-link-secondary" href="/viewer" target="_blank">
+            普通viewerを開く
+          </a>
+          <a
+            className="admin-viewer-link"
+            href="/viewer?broadcast=1"
+            target="_blank"
+          >
+            配信用viewerを開く
+          </a>
+        </div>
       </header>
 
       <section className="admin-simple-status">

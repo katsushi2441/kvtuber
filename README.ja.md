@@ -28,7 +28,8 @@ kvtuberのviewer、配信用viewer、admin、スクリーンショット、デ�
 - PNG/SVGアバター差し替えと簡易口パク
 - 管理画面から番組・スケジュール・割り込み発話を制御
 - `storage/*.json` によるローカル番組管理
-- `/viewer?broadcast=1` の配信用固定viewer
+- `/viewer` の普通viewer
+- `/viewer?broadcast=1` のOBS/YouTube配信用固定viewer
 - edge-ttsベースのTTS shim
 - YouTube Live/RTMP起動ヘルパー
 
@@ -41,10 +42,21 @@ cp .env.sample .env
 npm run dev -- --host 0.0.0.0 --port 18308
 ```
 
-配信用viewer:
+開くURL:
 
 ```text
-http://localhost:18308/viewer?broadcast=1
+管理画面: http://localhost:18308/admin
+設定つきstudio: http://localhost:18308/studio
+普通viewer: http://localhost:18308/viewer
+配信用viewer: http://localhost:18308/viewer?broadcast=1
+```
+
+viewerの役割:
+
+```text
+/viewer は普通viewerです。通常の視聴、自律発話確認、OBSを前提にしない動作確認に使います。
+/viewer?broadcast=1 は配信用固定viewerです。OBS、Playwright/browser録画、RTMP、YouTube Liveに使います。
+/studio は設定と手動チャット操作を行う運用者向け画面です。
 ```
 
 ## 参考OSSの扱い
