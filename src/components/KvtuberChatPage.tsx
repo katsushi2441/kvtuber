@@ -10,6 +10,9 @@ type KdeckJobStatus = {
   elapsed?: number;
   target_agent?: string;
   execution_mode?: string;
+  business_status?: string;
+  process_ok?: boolean;
+  ok?: boolean;
   cwd?: string;
 };
 
@@ -121,9 +124,9 @@ export function KvtuberChatPage() {
 
         updateAssistantMessage(assistantMessageId, {
           content: jobResultText(job),
-          status: job.status || 'finished',
+          status: job.business_status || job.status || 'finished',
         });
-        setStatus(job.status || 'finished');
+        setStatus(job.business_status || job.status || 'finished');
       } catch (error) {
         updateAssistantMessage(assistantMessageId, {
           content: `状態取得に失敗しました: ${
@@ -167,7 +170,8 @@ export function KvtuberChatPage() {
         body: JSON.stringify({
           message,
           history,
-          executionMode: 'confirm',
+          cwd: '/home/kojima/work',
+          executionMode: 'full-access',
           targetAgent: 'local',
         }),
       });

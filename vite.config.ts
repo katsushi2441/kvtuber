@@ -24,7 +24,7 @@ const YOUTUBE_LIVE_PATH = join(__dirname, 'storage/youtube-live.json');
 const YOUTUBE_LIVE_SCRIPT = join(__dirname, 'scripts/youtube-live-rtmp.mjs');
 const KDECK_BASE_URL = (process.env.KVTUBER_KDECK_BASE_URL || 'http://127.0.0.1:18301').replace(/\/+$/, '');
 const KDECK_TOKEN = process.env.KVTUBER_KDECK_TOKEN || process.env.KDECK_TOKEN || '';
-const KDECK_DEFAULT_CWD = process.env.KVTUBER_KDECK_DEFAULT_CWD || '/home/kojima/work/vwork';
+const KDECK_DEFAULT_CWD = process.env.KVTUBER_KDECK_DEFAULT_CWD || '/home/kojima/work';
 const KDECK_DEFAULT_LOCAL_CWD = process.env.KVTUBER_KDECK_LOCAL_CWD || '/home/kojima/work/kdeck';
 const KDECK_DEFAULT_MODEL = process.env.KVTUBER_KDECK_MODEL || 'gpt-5.5';
 
@@ -382,7 +382,7 @@ function normalizeKdeckChatTask(body: KdeckChatTaskRequest) {
     message,
     history,
     cwd: String(body.cwd || KDECK_DEFAULT_CWD).trim() || KDECK_DEFAULT_CWD,
-    executionMode: String(body.executionMode || 'confirm').trim() || 'confirm',
+    executionMode: String(body.executionMode || 'full-access').trim() || 'full-access',
     targetAgent: String(body.targetAgent || 'local').trim() || 'local',
     model: String(body.model || KDECK_DEFAULT_MODEL).trim() || KDECK_DEFAULT_MODEL,
   };
@@ -401,6 +401,9 @@ function buildKdeckChatPrompt(task: ReturnType<typeof normalizeKdeckChatTask>) {
     '実作業が必要な依頼なら、kdeckのAgent Taskとして実行する前提で、作業内容を整理して進めてください。',
     'ブログ投稿、ファイル編集、調査、動画制作、GitHub管理など、依頼内容はブログに限定しません。',
     'デモ制作の依頼では、必要に応じてkargovでブラウザ操作や画面を録画し、解説付き動画にまとめ、kurageへ投稿し、URLを報告してください。',
+    'VWork blog、kargov、kurageなど複数リポジトリをまたぐ作業では /home/kojima/work を基準に必要なリポジトリへ移動してください。',
+    '公開や投稿を含む依頼は、GitHub PagesのURL、kuragev.phpのURL、関連commit/push完了を確認できるまで完了扱いにしないでください。',
+    '途中で失敗した場合は status を成功のように書かず、どの成果物が未完了かを最初に明記してください。',
     'できていないことをできたとは書かず、実行結果・未完了・次に必要なことを明確にしてください。',
     '',
     '会話履歴:',
