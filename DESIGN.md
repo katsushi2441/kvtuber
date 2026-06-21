@@ -39,3 +39,19 @@ This project represents Kurage as a product for business owners, seminars, YouTu
 ## Why This Rule Exists
 
 The project repeatedly produced black-background VTuber/demo screens. That is explicitly not acceptable for Kurage. The desired product impression is bright, trustworthy, and commercial, not dark-mode developer tooling.
+
+## Demo Integrity Rule
+
+kvtuber demo videos must show the real product behavior. Do not create fake or placeholder demos that only look like kvtuber.
+
+Required:
+
+- use the real `/admin`, `/viewer`, or `/viewer?broadcast=1` screens
+- use the canonical avatar assets in `public/avatar/`
+- start programs through the real UI or API and state which was used
+- let the LLM-generated seminar content drive the broadcast, not empty sample lines
+- preserve the real seminar audio during seminar sections
+- keep demo narration separate from seminar audio so they do not overlap
+- verify mouth alignment, audio, subtitle readability, and viewer layout before publishing
+
+If a demo cannot be recorded honestly, stop and fix the workflow. Do not ship a cosmetic substitute.
