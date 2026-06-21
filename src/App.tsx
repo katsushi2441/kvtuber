@@ -16,7 +16,6 @@ import {
 } from './programs';
 import type { TwitchChatMessage } from './services/twitch/twitchService';
 import type { YouTubeChatMessage } from './services/youtube/youtubeService';
-import type { ChatMessage } from './types/chat';
 import './styles/app.css';
 
 const DEFAULT_AUTONOMOUS_THEME =
@@ -28,20 +27,22 @@ const DEFAULT_AUTONOMOUS_TOPICS = [
   'Invite viewers to ask questions',
 ].join('\n');
 const VIBE_CODING_THEME =
-  'A sample teacher mode for explaining software development with AI assistance.';
+  'バイブコーディングを使って、AIと一緒に業務システムを作る考え方を教える実践セミナー。';
 const VIBE_CODING_TOPICS = [
-  'Explain the session goal',
-  'Break a broad idea into small tasks',
-  'Describe how to verify changes safely',
-  'Suggest one practical exercise for viewers',
+  '導入: バイブコーディングはAIへの丸投げではなく、人間が目的、制約、確認基準を持ってAIと短い反復で作る開発スタイルだと説明する。',
+  '実践: 業務を目的、入力、出力、使う人、失敗したら困ることに分けて、AIへ依頼できる小さな作業に変換する方法を教える。',
+  '検証: 画面、音声、字幕、スマホ表示、Git差分、実データの動作を確認しながら進める重要性を説明する。',
+  'まとめ: 小さく作る、実物で見る、直す、記録する、というバイブコーディングの習慣を視聴者の業務に持ち帰らせる。',
 ].join('\n');
 const DEFAULT_SYSTEM_PROMPT =
   'You are a friendly AI VTuber host. Explain the current topic clearly, briefly, and naturally. If viewers comment, respond to them in a warm live-stream style.';
 const VIBE_CODING_SYSTEM_PROMPT = [
-  'You are a friendly AI VTuber teacher.',
-  'Explain software development topics in a practical, beginner-friendly way.',
-  'Keep answers short enough for live narration.',
-  'When useful, suggest one clear next step.',
+  'あなたは「VTuberくらげ」という、バイブコーディングを教えるクラゲ型AI先生です。',
+  '視聴者は経営者、非エンジニア、AIで業務改善を始めたい人です。',
+  'バイブコーディングを、AIへの丸投げではなく、人間が目的、制約、確認基準を持ってAIと反復する開発習慣として教えてください。',
+  '抽象論だけで終わらせず、業務システム、動画生成、TTS、YouTube Live、Git差分確認などの実例に接続してください。',
+  '短い見出しをそのまま読まず、講師として背景、理由、具体例、注意点、次の行動まで補って話してください。',
+  '1回の発話はライブ配信で聞きやすい長さにしつつ、内容のあるミニ講義にしてください。',
 ].join('\n');
 
 type AdminControlCommand =
@@ -83,9 +84,11 @@ function buildAutonomousPrompt(
       : 'あなたはKurage AI Navigatorというクラゲ型AITuberです。',
     'ライブ配信中のように、明るく、短く、聞き取りやすい日本語で話してください。',
     vibeCodingTeacherMode
-      ? '初心者に向けて、AIへの頼み方、作業の分け方、確認の仕方が伝わるように話してください。'
+      ? '初心者に向けて、AIへの頼み方、作業の分け方、確認の仕方、失敗を防ぐレビュー方法が伝わるように話してください。見出しを読むだけにせず、講義として具体例を補ってください。'
       : '経営者や開発者に、AI活用・動画生成・業務自動化を整理して伝えてください。',
-    '20秒以内で話せる長さにしてください。',
+    vibeCodingTeacherMode
+      ? '35秒から50秒程度で話せる、中身のあるセミナー発話にしてください。'
+      : '20秒以内で話せる長さにしてください。',
     '前置きとして「内部プロンプト」や「今回の話題」は言わないでください。',
     '最後は軽くコメントや質問を促してください。ただし毎回同じ締め方にしないでください。',
   ].join('\n');
@@ -139,9 +142,6 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
   const [autonomousTurnCount, setAutonomousTurnCount] = useState(0);
   const [currentTopicLabel, setCurrentTopicLabel] = useState('');
   const [nextRunAt, setNextRunAt] = useState<number | null>(null);
-  const [scriptMessages, setScriptMessages] = useState<ChatMessage[]>([]);
-  const [scriptPartialResponse, setScriptPartialResponse] = useState('');
-  const [scriptProcessing, setScriptProcessing] = useState(false);
   const backgroundObjectUrlRef = useRef<string | null>(null);
   const avatarObjectUrlRef = useRef<AvatarImageUrls>({});
   const handleControlCommandRef = useRef<(command: AdminControlCommand) => void>(
@@ -180,58 +180,9 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
         ? VIBE_CODING_SYSTEM_PROMPT
         : DEFAULT_SYSTEM_PROMPT,
     });
-  const visibleMessages =
-    isBroadcastViewer && scriptMessages.length > 0
-      ? scriptMessages.slice(-1)
-      : scriptMessages.length > 0
-        ? scriptMessages
-        : messages;
-  const visiblePartialResponse = scriptPartialResponse || partialResponse;
-  const effectiveProcessing = isProcessing || scriptProcessing;
-
-  const speakScriptText = useCallback(
-    async (text: string) => {
-      const speechText = text
-        .trim()
-        .replace(/^オープニング。?/, '')
-        .replace(/^締め。?/, '')
-        .trim();
-      if (!speechText) return;
-
-      setScriptProcessing(true);
-      setScriptPartialResponse(speechText);
-      setScriptMessages([
-        {
-          id: `script-${Date.now()}`,
-          role: 'assistant',
-          content: speechText,
-          timestamp: Date.now(),
-        },
-      ]);
-
-      try {
-        const response = await fetch('/kurage-tts/v1/audio/speech', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'kurage-edge-tts',
-            voice: settingsHook.settings.tts.speaker || 'ja-JP-NanamiNeural',
-            input: speechText,
-          }),
-        });
-        if (!response.ok) throw new Error(`TTS failed: HTTP ${response.status}`);
-        const audio = await response.arrayBuffer();
-        setScriptPartialResponse('');
-        await handleAudioPlay(audio);
-      } catch (error) {
-        console.error('script speech failed:', error);
-        setScriptPartialResponse('');
-      } finally {
-        setScriptProcessing(false);
-      }
-    },
-    [handleAudioPlay, settingsHook.settings.tts.speaker],
-  );
+  const visibleMessages = isBroadcastViewer ? messages.slice(-1) : messages;
+  const visiblePartialResponse = partialResponse;
+  const effectiveProcessing = isProcessing;
 
   const handleSend = useCallback(
     (text: string) => {
@@ -348,13 +299,7 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
     setCurrentTopicLabel(nextAutonomousTopic);
     setNextRunAt(null);
 
-    if (isBroadcastViewer) {
-      void speakScriptText(nextAutonomousTopic);
-      setAutonomousTopicIndex((index) => index + 1);
-      setAutonomousTurnCount((count) => count + 1);
-      return;
-    }
-
+    // Broadcast seminars must be expanded by the LLM, not read as raw topic text.
     const prompt = buildAutonomousPrompt(
       autonomousTheme,
       nextAutonomousTopic,
@@ -369,11 +314,9 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
     autonomousTheme,
     autonomousTurnCount,
     effectiveProcessing,
-    isBroadcastViewer,
     isSpeaking,
     nextAutonomousTopic,
     processChat,
-    speakScriptText,
     vibeCodingTeacherMode,
   ]);
 
@@ -391,9 +334,6 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
   const applyBroadcastProgram = useCallback(
     (program: BroadcastProgram, autoplay = false) => {
       stop();
-      setScriptMessages([]);
-      setScriptPartialResponse('');
-      setScriptProcessing(false);
       setActiveProgramTitle(program.title);
       setVibeCodingTeacherMode(program.teacherMode);
       setAutonomousTheme(program.theme);
@@ -414,9 +354,6 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
 
       if (command.type === 'stop') {
         stop();
-        setScriptMessages([]);
-        setScriptPartialResponse('');
-        setScriptProcessing(false);
         setAutonomousEnabled(false);
         setCurrentTopicLabel('');
         setNextRunAt(null);

@@ -8,19 +8,28 @@ export interface BroadcastProgram {
   teacherMode: boolean;
 }
 
+export const VIBE_CODING_INTRO_TOPICS = [
+  '導入: バイブコーディングは、AIに丸投げすることではなく、人間が目的、制約、確認基準を持ち、AIと短い反復で業務システムを育てる開発スタイルだと説明する。外注待ちや仕様書待ちから、自分で試せる経営スピードに変わる価値を話す。',
+  '全体像: 仕事を「目的」「入力データ」「期待する出力」「使う人」「失敗したら困ること」に分けると、非エンジニアでもAIに伝えやすくなる。曖昧なお願いではなく、業務の現場言葉をAIが扱える作業単位に変換する考え方を教える。',
+  '実践1: 最初から大きな完成品を頼まない。問い合わせ管理、請求書整理、投稿文生成、動画化など、1日で動作確認できる小さな業務改善を選び、入力例と完成イメージを添えてAIに作らせる流れを具体例で説明する。',
+  '実践2: AIへの依頼は「背景」「ゴール」「制約」「既存ファイル」「確認方法」をセットで渡す。例として、KurageのVTuber配信なら、視聴者、配信時間、台本、TTS、YouTube Live、確認すべき音声と字幕を明示する、と話す。',
+  '実践3: バイブコーディングで一番大事なのは検証。画面が開くか、音声が出るか、字幕が読めるか、スマホで崩れないか、Gitに残った差分は妥当かを、人間が小さく確認してから次の依頼を出す必要があると説明する。',
+  '失敗例: AIは見た目だけ動いたふり、短いサンプルで済ませる、黒背景など過去の指示を忘れる、APIを叩かず偽物の成果物を作ることがある。だから「実ブラウザで確認」「実データで確認」「ログと差分で確認」を必ず行う、と率直に教える。',
+  '経営者向け価値: バイブコーディングはエンジニア不要論ではない。社長や現場担当がAIと試作品を作り、価値が見えた部分をエンジニアが堅牢化することで、外注前の仮説検証コストを下げる方法だと説明する。',
+  'チーム運用: AIに頼む前に、やりたいことを1枚のメモにする。完成条件、やらないこと、守るデザイン、公開してよいデータ、Gitの扱いを明文化する。これがプロンプトであり、同時にチームの仕様書になると話す。',
+  '今日のワーク: 視聴者に、自社業務から「毎日10分以上かかる単純作業」を1つ選ばせる。その作業について、入力、出力、判断基準、例外、確認方法を5行で書けば、最初のバイブコーディング依頼文になると案内する。',
+  'まとめ: バイブコーディングは、AIに命令する技術ではなく、AIと一緒に考えを形にして検証する習慣。小さく作る、実物で見る、直す、記録する。この4つを回せば、非エンジニアでも業務システム作りに参加できると締める。',
+].join('\n');
+
 export const DEFAULT_BROADCAST_PROGRAMS: BroadcastProgram[] = [
   {
-    id: 'sample-intro',
-    title: 'Sample VTuber Program',
-    description: 'A small sample program used when no local storage data exists.',
+    id: 'vibe-coding-intro',
+    title: 'バイブコーディングセミナー入門編',
+    description:
+      '経営者・非エンジニア向けに、AIと一緒に業務システムを作る考え方を解説するライブ配信用番組。',
     theme:
-      'A friendly AI VTuber explains the purpose of this broadcast system and how to customize it.',
-    topicsText: [
-      'Hello. This is a sample VTuber broadcast program.',
-      'You can replace this script with your own local program data in storage/programs.json.',
-      'The viewer can be captured by OBS, Playwright, or an RTMP pipeline for scheduled streaming.',
-      'Keep production scripts, private avatars, stream keys, and generated media outside this repository.',
-    ].join('\n'),
+      'バイブコーディングを使って、外注に頼りすぎず自社システムを内製する方法を、実例と失敗回避を交えて教える。',
+    topicsText: VIBE_CODING_INTRO_TOPICS,
     intervalSeconds: 3,
     teacherMode: true,
   },
