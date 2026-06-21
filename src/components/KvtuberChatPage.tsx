@@ -29,6 +29,11 @@ function initialToken() {
   return params.get('token') || localStorage.getItem('kurage-admin-token') || '';
 }
 
+function initialJobId() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('job_id') || params.get('jobId') || '';
+}
+
 const DEFAULT_DEMO_REQUEST = [
   'kvtuberにブログ投稿を依頼して、kdeckに実行させてみた、という内容でVWork blogに記事を書いて投稿して。',
   'その作業の流れをkargovで録画して、解説付きのデモ動画にまとめて、kurageに投稿して。',
@@ -59,6 +64,8 @@ export function KvtuberChatPage() {
   const [status, setStatus] = useState('ready');
   const [isSending, setIsSending] = useState(false);
   const pollTimerRef = useRef<number | null>(null);
+  const initialJobIdRef = useRef(initialJobId());
+  const loadedInitialJobRef = useRef(false);
 
   useEffect(
     () => () => {
@@ -139,6 +146,25 @@ export function KvtuberChatPage() {
     };
     void run();
   };
+
+  useEffect(() => {
+    const jobId = initialJobIdRef.current.trim();
+    if (!jobId || loadedInitialJobRef.current || !authToken) return;
+    loadedInitialJobRef.current = true;
+    const assistantMessageId = `assistant-resume-${jobId}`;
+    setMessages((current) => [
+      ...current,
+      {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: `kdeckの実行結果を読み込みます。Job ID: ${jobId}`,
+        jobId,
+        status: 'loading',
+      },
+    ]);
+    setStatus('running');
+    pollJob(jobId, assistantMessageId);
+  }, [authToken]);
 
   const sendMessage = async () => {
     const message = input.trim();
