@@ -147,7 +147,11 @@ export function AdminConsole() {
   const [youtubeStreamKeyText, setYoutubeStreamKeyText] = useState('');
   const [commentText, setCommentText] = useState('');
   const [kdeckChatInput, setKdeckChatInput] = useState(
-    'kvtuberにブログ投稿を依頼して、kdeckに実行させてみた、という内容でVWork blogに記事を書いて投稿して',
+    [
+      'kvtuberにブログ投稿を依頼して、kdeckに実行させてみた、という内容でVWork blogに記事を書いて投稿して。',
+      'その作業の流れをkargovで録画して、解説付きのデモ動画にまとめて、kurageに投稿して。',
+      '最後にVWork blogの記事URL、kurage動画URL、実行したcommitを報告して。',
+    ].join('\n'),
   );
   const [kdeckChatMessages, setKdeckChatMessages] = useState<KdeckChatMessage[]>([
     {
@@ -952,7 +956,7 @@ export function AdminConsole() {
               <textarea
                 value={kdeckChatInput}
                 rows={5}
-                placeholder="例: この内容でVWork blogに投稿して。例: kvtuberのデモ動画を作って。例: GitHubのREADMEを整えて。"
+                placeholder="例: VWork blogに記事を書いて投稿し、その流れをkargovで録画して、kurageにデモ動画として投稿して。最後に記事URL、動画URL、commitを報告して。"
                 onChange={(event) => setKdeckChatInput(event.target.value)}
               />
             </label>
