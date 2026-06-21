@@ -170,7 +170,7 @@ export function KvtuberChatPage() {
         body: JSON.stringify({
           message,
           history,
-          cwd: '/home/kojima/work',
+          cwd: '/home/kojima/work/kdeck',
           executionMode: 'full-access',
           targetAgent: 'local',
         }),

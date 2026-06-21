@@ -24,7 +24,7 @@ const YOUTUBE_LIVE_PATH = join(__dirname, 'storage/youtube-live.json');
 const YOUTUBE_LIVE_SCRIPT = join(__dirname, 'scripts/youtube-live-rtmp.mjs');
 const KDECK_BASE_URL = (process.env.KVTUBER_KDECK_BASE_URL || 'http://127.0.0.1:18301').replace(/\/+$/, '');
 const KDECK_TOKEN = process.env.KVTUBER_KDECK_TOKEN || process.env.KDECK_TOKEN || '';
-const KDECK_DEFAULT_CWD = process.env.KVTUBER_KDECK_DEFAULT_CWD || '/home/kojima/work';
+const KDECK_DEFAULT_CWD = process.env.KVTUBER_KDECK_DEFAULT_CWD || '/home/kojima/work/kdeck';
 const KDECK_DEFAULT_LOCAL_CWD = process.env.KVTUBER_KDECK_LOCAL_CWD || '/home/kojima/work/kdeck';
 const KDECK_DEFAULT_MODEL = process.env.KVTUBER_KDECK_MODEL || 'gpt-5.5';
 
