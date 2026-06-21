@@ -4,6 +4,24 @@
 
 This repository root is the product itself. Local upstream/reference projects can live inside this folder while developing, but Git tracks only the reusable `kvtuber` system code.
 
+## Positioning: Agent-Executing VTuber
+
+Kurage AI VTuber is not only a talking avatar or a livestream character. It is designed as an **Agent-executing VTuber**: a character-facing interface that can receive natural-language work requests, hand them to `kdeck` as AI Agent Tasks, and return real deliverables such as published articles, generated videos, Kurage URLs, and Git commits.
+
+Most AI VTuber projects focus on conversation, memory, voice, Live2D, chat reactions, or livestream entertainment. Most AI agent products focus on task execution through chat, IDEs, browsers, or workflow dashboards. Kurage AI VTuber connects those two worlds: the VTuber becomes the friendly operator for real AI work.
+
+This makes `kvtuber` a world-first-class product concept: **a VTuber that can act as the front desk, narrator, and progress reporter for autonomous AI Agent work**. We do not claim that AI avatars, MCP tools, or autonomous agents are new by themselves. The distinctive claim is the integration:
+
+```text
+VTuber personality
+  -> natural-language work request
+  -> kdeck Agent Task execution
+  -> real artifacts and URLs
+  -> result report back inside the VTuber experience
+```
+
+The goal is to move VTubers beyond "AI characters that talk" and toward **AI characters that get work done**.
+
 ## Structure
 
 ```text
