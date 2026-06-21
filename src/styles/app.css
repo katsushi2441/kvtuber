@@ -2315,6 +2315,13 @@ body {
   margin: 0;
 }
 
+.kvtuber-chat-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .kvtuber-chat-avatar-card {
   align-items: center;
   background:
@@ -2477,8 +2484,8 @@ body {
 
 .kvtuber-chat-send {
   border-radius: 14px;
-  min-width: 150px;
-  padding: 12px 18px;
+  min-width: 116px;
+  padding: 11px 14px;
 }
 
 @media (max-height: 820px) and (min-width: 760px) {
@@ -2579,6 +2586,10 @@ body {
 
   .kvtuber-chat-composer-footer {
     grid-template-columns: 1fr;
+  }
+
+  .kvtuber-chat-actions {
+    justify-content: stretch;
   }
 
   .kvtuber-chat-send {

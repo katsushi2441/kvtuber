@@ -24,6 +24,42 @@ type KvtuberChatMessage = {
   status?: string;
 };
 
+type ChatRoute = 'auto' | 'ollama' | 'kdeck';
+
+const OLLAMA_CHAT_MODEL = 'gemma4:12b-it-qat';
+
+const KDECK_REQUEST_PATTERNS = [
+  /投稿/,
+  /公開/,
+  /転載/,
+  /アップロード/,
+  /youtube/i,
+  /kurage/i,
+  /kargov/i,
+  /vwork/i,
+  /github/i,
+  /commit|コミット/i,
+  /push|プッシュ/i,
+  /実装/,
+  /修正/,
+  /変更/,
+  /作成/,
+  /生成/,
+  /録画/,
+  /登録/,
+  /保存/,
+  /デプロイ/,
+  /ファイル/,
+  /フォルダ/,
+  /コード/,
+  /調査/,
+  /検索/,
+  /確認して/,
+  /やって/,
+  /して$/,
+  /してください$/,
+];
+
 function initialToken() {
   const params = new URLSearchParams(window.location.search);
   return params.get('token') || localStorage.getItem('kurage-admin-token') || '';
@@ -34,12 +70,6 @@ function initialJobId() {
   return params.get('job_id') || params.get('jobId') || '';
 }
 
-const DEFAULT_DEMO_REQUEST = [
-  'kvtuberにブログ投稿を依頼して、kdeckに実行させてみた、という内容でVWork blogに記事を書いて投稿して。',
-  'その作業の流れをkargovで録画して、解説付きのデモ動画にまとめて、kurageに投稿して。',
-  '最後にVWork blogの記事URL、kurage動画URL、実行したcommitを報告して。',
-].join('\n');
-
 function jobResultText(job: KdeckJobStatus) {
   return (
     job.message ||
@@ -49,15 +79,48 @@ function jobResultText(job: KdeckJobStatus) {
   );
 }
 
+function shouldUseKdeck(message: string) {
+  const trimmed = message.trim();
+  if (!trimmed) return false;
+
+  if (/^(雑談|会話|相談だけ|質問だけ|教えて|どう思う|なぜ|なんで|とは|かな|？|\?)/.test(trimmed)) {
+    return false;
+  }
+
+  return KDECK_REQUEST_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
+function resolveRoute(message: string, route: ChatRoute) {
+  if (route === 'auto') {
+    return shouldUseKdeck(message) ? 'kdeck' : 'ollama';
+  }
+  return route;
+}
+
+function buildOllamaMessages(
+  history: Array<{ role: 'user' | 'assistant'; content: string }>,
+  message: string,
+) {
+  return [
+    {
+      role: 'system',
+      content:
+        'あなたは「Kurage AI VTuber」というクラゲ型AIアシスタントです。通常会話ではOllama上のLLMとして、短く自然な日本語で返答します。ユーザーが投稿、実装、録画、ファイル編集、Git操作など実作業を依頼した場合は、自分では実行したと言わず「kdeckへ依頼できます」と案内してください。',
+    },
+    ...history.slice(-10),
+    { role: 'user', content: message },
+  ];
+}
+
 export function KvtuberChatPage() {
   const [token, setToken] = useState(initialToken);
-  const [input, setInput] = useState(DEFAULT_DEMO_REQUEST);
+  const [input, setInput] = useState('');
   const [messages, setMessages] = useState<KvtuberChatMessage[]>([
     {
       id: 'hello',
       role: 'assistant',
       content:
-        'kvtuberに相談や作業依頼をしてください。必要な作業はkdeckへ渡し、実行中の状態と返答をここに表示します。',
+        'こんにちは。ふつうの会話はOllamaで返答します。投稿・実装・録画・commit/pushなど実作業が必要な依頼だけ、kdeckへ渡して実行します。',
     },
   ]);
   const [lastJob, setLastJob] = useState<KdeckJobStatus | null>(null);
@@ -103,6 +166,33 @@ export function KvtuberChatPage() {
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
     return result;
+  };
+
+  const requestOllamaChat = async (
+    message: string,
+    history: Array<{ role: 'user' | 'assistant'; content: string }>,
+  ) => {
+    const response = await fetch('/ollama/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: OLLAMA_CHAT_MODEL,
+        messages: buildOllamaMessages(history, message),
+        stream: false,
+        temperature: 0.7,
+      }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.error?.message || result.error || `Ollama HTTP ${response.status}`);
+    }
+    const content = result.choices?.[0]?.message?.content;
+    if (!content || typeof content !== 'string') {
+      throw new Error('Ollamaの返答を取得できませんでした');
+    }
+    return content.trim();
   };
 
   const pollJob = (jobId: string, assistantMessageId: string) => {
@@ -164,11 +254,15 @@ export function KvtuberChatPage() {
     ]);
     setStatus('running');
     pollJob(jobId, assistantMessageId);
+    // pollJob is intentionally kept outside the dependency list so a resumed
+    // job is loaded only once after the admin token becomes available.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authToken]);
 
-  const sendMessage = async () => {
+  const sendMessage = async (route: ChatRoute = 'auto') => {
     const message = input.trim();
     if (!message || isSending) return;
+    const selectedRoute = resolveRoute(message, route);
 
     const userMessage: KvtuberChatMessage = {
       id: `user-${Date.now()}`,
@@ -178,19 +272,33 @@ export function KvtuberChatPage() {
     const assistantMessage: KvtuberChatMessage = {
       id: `assistant-${Date.now()}`,
       role: 'assistant',
-      content: 'kdeckへ依頼しています...',
-      status: 'submitting',
+      content:
+        selectedRoute === 'kdeck'
+          ? 'kdeckへ依頼しています...'
+          : 'Ollamaで返答を考えています...',
+      status: selectedRoute === 'kdeck' ? 'submitting' : 'ollama',
     };
-    const history = messages.map((item) => ({
-      role: item.role,
-      content: item.content,
-    }));
+    const history: Array<{ role: 'user' | 'assistant'; content: string }> =
+      messages.map((item) => ({
+        role: item.role,
+        content: item.content,
+      }));
     setMessages((current) => [...current, userMessage, assistantMessage]);
     setInput('');
     setIsSending(true);
-    setStatus('submitting');
+    setStatus(selectedRoute === 'kdeck' ? 'submitting' : 'chatting');
 
     try {
+      if (selectedRoute === 'ollama') {
+        const reply = await requestOllamaChat(message, history);
+        updateAssistantMessage(assistantMessage.id, {
+          content: reply,
+          status: 'ollama',
+        });
+        setStatus('ready');
+        return;
+      }
+
       const result = await requestWithToken('/control/kdeck/chat', {
         method: 'POST',
         body: JSON.stringify({
@@ -239,7 +347,7 @@ export function KvtuberChatPage() {
           <div className="admin-kicker">Kurage AI VTuber Chat</div>
           <h1>kvtuberに依頼する</h1>
           <p>
-            codexやClaude Codeのように、kvtuberへ自然文で依頼します。kdeckの実行結果もこの画面に返します。
+            ふつうの会話はOllamaで返答し、成果物を作る依頼だけkdeckへ渡します。kdeckの実行結果もこの画面に返します。
           </p>
         </div>
         <nav className="kvtuber-chat-nav">
@@ -276,7 +384,7 @@ export function KvtuberChatPage() {
               <textarea
                 value={input}
                 rows={8}
-                placeholder="例: VWork blogに記事を書いて投稿し、その流れをkargovで録画して、kurageにデモ動画として投稿して。最後にURLとcommitを報告して。"
+                placeholder="例: 最近のAI VTuberってどう思う？ / VWork blogに記事を書いて投稿し、その流れをkargovで録画して、kurageに投稿して。"
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={(event) => {
                   if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
@@ -287,15 +395,31 @@ export function KvtuberChatPage() {
             </label>
             <div className="kvtuber-chat-composer-footer">
               <p>
-                送信後はkdeckの状態を自動で確認し、完了した返答をチャット欄に表示します。
+                自動判定では、会話はOllama、実作業はkdeckへ送ります。誤判定しそうな時は下のボタンで明示できます。
               </p>
-              <button
-                className="admin-primary kvtuber-chat-send"
-                disabled={isSending || !input.trim()}
-                onClick={() => void sendMessage()}
-              >
-                kvtuberへ送信
-              </button>
+              <div className="kvtuber-chat-actions">
+                <button
+                  className="admin-secondary kvtuber-chat-send"
+                  disabled={isSending || !input.trim()}
+                  onClick={() => void sendMessage('ollama')}
+                >
+                  会話だけ
+                </button>
+                <button
+                  className="admin-secondary kvtuber-chat-send"
+                  disabled={isSending || !input.trim()}
+                  onClick={() => void sendMessage('kdeck')}
+                >
+                  kdeckへ作業依頼
+                </button>
+                <button
+                  className="admin-primary kvtuber-chat-send"
+                  disabled={isSending || !input.trim()}
+                  onClick={() => void sendMessage('auto')}
+                >
+                  自動判定で送信
+                </button>
+              </div>
             </div>
           </section>
         </section>
@@ -316,7 +440,7 @@ export function KvtuberChatPage() {
             />
           </label>
           <p className="admin-hint">
-            この画面は番組管理ではなく、kvtuberへの業務依頼専用です。入力欄は中央のメイン領域にあります。
+            管理者トークンはkdeckへ作業依頼するときだけ必要です。Ollamaとの通常会話はトークンなしでも使えます。
           </p>
         </aside>
       </main>
