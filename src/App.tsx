@@ -144,6 +144,9 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
   const [scriptProcessing, setScriptProcessing] = useState(false);
   const backgroundObjectUrlRef = useRef<string | null>(null);
   const avatarObjectUrlRef = useRef<AvatarImageUrls>({});
+  const handleControlCommandRef = useRef<(command: AdminControlCommand) => void>(
+    () => {},
+  );
 
   const handleAudioPlay = useCallback(
     async (arrayBuffer: ArrayBuffer) => {
@@ -495,12 +498,18 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
   );
 
   useEffect(() => {
+    handleControlCommandRef.current = handleControlCommand;
+  }, [handleControlCommand]);
+
+  useEffect(() => {
     if (!viewerOnly) return;
 
     const source = new EventSource('/control/events');
     source.onmessage = (event) => {
       try {
-        handleControlCommand(JSON.parse(event.data) as AdminControlCommand);
+        handleControlCommandRef.current(
+          JSON.parse(event.data) as AdminControlCommand,
+        );
       } catch (error) {
         console.warn('Failed to handle admin control command:', error);
       }
@@ -509,13 +518,30 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
       console.warn('Admin control stream disconnected; retrying...');
     };
     return () => source.close();
-  }, [handleControlCommand, viewerOnly]);
+  }, [viewerOnly]);
 
   useEffect(() => {
     if (!isBroadcastViewer || isAudioUnlocked) return;
-    void unlockAudio().catch((error) => {
-      console.warn('Broadcast audio unlock skipped:', error);
-    });
+    let attempts = 0;
+    const tryUnlock = () => {
+      attempts += 1;
+      void unlockAudio().catch((error) => {
+        if (attempts <= 1) {
+          console.warn('Broadcast audio unlock skipped:', error);
+        }
+      });
+    };
+
+    tryUnlock();
+    const timer = window.setInterval(() => {
+      if (attempts >= 10) {
+        window.clearInterval(timer);
+        return;
+      }
+      tryUnlock();
+    }, 1000);
+
+    return () => window.clearInterval(timer);
   }, [isAudioUnlocked, isBroadcastViewer, unlockAudio]);
 
   useEffect(() => {
@@ -732,7 +758,7 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
           avatarImageUrls={avatarImageUrls}
           hideInput={viewerOnly}
         />
-        {viewerOnly && !isAudioUnlocked && (
+        {viewerOnly && !isBroadcastViewer && !isAudioUnlocked && (
           <div className="viewer-audio-chip">
             <button onClick={handleUnlockAudio}>音声OFF / クリックでON</button>
             {audioUnlockError && (

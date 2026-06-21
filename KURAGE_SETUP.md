@@ -8,6 +8,11 @@ cp -r storage.sample storage
 cp .env.sample .env
 ```
 
+
+## Design Rule: White Studio
+
+Do not use black or dark-mode backgrounds for kvtuber viewer, broadcast viewer, admin console, screenshots, or demo videos. Kurage should use a bright White Studio look: white/off-white backgrounds, pale aqua accents, readable dark text, and light subtitle cards. Avoid `background: #000`, dark navy full-screen panels, black translucent subtitle boxes, and cyberpunk-style dark gradients.
+
 Useful environment variables:
 
 ```env

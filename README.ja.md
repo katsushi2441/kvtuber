@@ -17,6 +17,11 @@ kvtuber/
   aituber-onair/    参考用clone、Git除外
 ```
 
+
+## デザインルール: White Studio
+
+kvtuberのviewer、配信用viewer、admin、スクリーンショット、デモ動画では、黒背景・ダークモード背景を使わない。Kurageは白系・薄い水色系・明るい紙面系のWhite Studioデザインを基本にする。`background: #000`、暗紺の全面背景、黒い半透明字幕箱、サイバーパンク風の暗いグラデーションは禁止。
+
 ## 主な機能
 
 - React/ViteベースのVTuber viewer

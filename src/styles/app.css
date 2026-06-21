@@ -6,7 +6,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #1a1a2e;
+  background: #f7fbff;
   color: #e0e0e0;
   min-height: 100vh;
 }
@@ -65,7 +65,7 @@ body:has(.broadcast-viewer-app),
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #11182f;
+  background: #eef9fc;
 }
 
 .broadcast-viewer-app .app-main,
@@ -102,7 +102,7 @@ body:has(.broadcast-viewer-app),
   max-width: min(820px, calc(100vw - 440px));
   margin: 0 auto 0 0;
   padding: 16px 22px;
-  background: rgba(6, 14, 31, 0.78);
+  background: rgba(255, 255, 255, 0.9);
   border: 2px solid rgba(119, 217, 255, 0.35);
   border-radius: 18px;
   box-shadow: 0 16px 46px rgba(0, 0, 0, 0.32);
@@ -133,7 +133,7 @@ body:has(.broadcast-viewer-app),
   gap: 8px;
   max-width: min(420px, calc(100vw - 28px));
   padding: 8px;
-  background: rgba(10, 18, 38, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(119, 217, 255, 0.34);
   border-radius: 999px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
@@ -226,7 +226,7 @@ body:has(.broadcast-viewer-app),
 .admin-program-summary {
   margin: 12px 0 16px;
   padding: 14px;
-  background: rgba(10, 18, 38, 0.62);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(119, 217, 255, 0.18);
   border-radius: 14px;
 }
@@ -311,7 +311,7 @@ body:has(.broadcast-viewer-app),
 .admin-schedule-preview {
   margin-bottom: 14px;
   padding: 12px;
-  background: rgba(10, 18, 38, 0.62);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(255, 183, 77, 0.28);
   border-radius: 14px;
 }
@@ -477,7 +477,7 @@ body:has(.broadcast-viewer-app),
   align-items: center;
   gap: 7px;
   padding: 8px 11px;
-  background: rgba(10, 18, 38, 0.78);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(119, 217, 255, 0.22);
   border-radius: 999px;
   color: #d8e8ff;
@@ -576,7 +576,7 @@ body:has(.broadcast-viewer-app),
 .admin-viewer-status-grid div {
   min-height: 78px;
   padding: 10px;
-  background: rgba(10, 18, 38, 0.62);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(119, 217, 255, 0.16);
   border-radius: 12px;
 }
@@ -655,7 +655,7 @@ body:has(.broadcast-viewer-app),
   gap: 8px;
   min-height: 42px;
   padding: 10px 12px;
-  background: rgba(10, 18, 38, 0.84);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(119, 217, 255, 0.26);
   border-radius: 10px;
   color: #f2f6ff;
@@ -691,7 +691,7 @@ body:has(.broadcast-viewer-app),
 .admin-field textarea {
   width: 100%;
   padding: 10px 12px;
-  background: rgba(10, 18, 38, 0.84);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(119, 217, 255, 0.26);
   border-radius: 10px;
   color: #f2f6ff;
@@ -756,7 +756,7 @@ body:has(.broadcast-viewer-app),
 .admin-applied-topics {
   margin-bottom: 14px;
   padding: 12px;
-  background: rgba(10, 18, 38, 0.58);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(119, 217, 255, 0.2);
   border-radius: 12px;
 }
@@ -825,7 +825,7 @@ body:has(.broadcast-viewer-app),
   bottom: 20px;
   max-width: min(520px, calc(100vw - 40px));
   padding: 12px 14px;
-  background: rgba(10, 18, 38, 0.94);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(119, 217, 255, 0.32);
   border-radius: 12px;
   color: #f2f6ff;
@@ -834,7 +834,7 @@ body:has(.broadcast-viewer-app),
 
 .app-header {
   padding: 12px 24px;
-  background: #16213e;
+  background: #ffffff;
   border-bottom: 1px solid #0f3460;
   display: flex;
   align-items: center;
@@ -860,7 +860,7 @@ body:has(.broadcast-viewer-app),
 }
 
 .settings-button:hover {
-  background: #0f3460;
+  background: #d8f3f8;
 }
 
 /* ── Settings Dialog ── */
@@ -878,7 +878,7 @@ body:has(.broadcast-viewer-app),
 .settings-dialog {
   width: min(480px, 90vw);
   max-height: 80vh;
-  background: #16213e;
+  background: #ffffff;
   border: 1px solid #0f3460;
   border-radius: 12px;
   display: flex;
@@ -915,7 +915,7 @@ body:has(.broadcast-viewer-app),
 }
 
 .settings-panel {
-  background: #16213e;
+  background: #ffffff;
   padding: 16px;
   overflow-y: auto;
 }
@@ -977,7 +977,7 @@ body:has(.broadcast-viewer-app),
 .settings-field input[type="number"] {
   width: 100%;
   padding: 6px 10px;
-  background: #1a1a2e;
+  background: #f7fbff;
   border: 1px solid #0f3460;
   border-radius: 6px;
   color: #e0e0e0;
@@ -1016,7 +1016,7 @@ body:has(.broadcast-viewer-app),
   justify-content: center;
   min-width: 110px;
   padding: 6px 10px;
-  background: #1a1a2e;
+  background: #f7fbff;
   border: 1px solid #0f3460;
   border-radius: 6px;
   color: #e0e0e0;
@@ -1027,7 +1027,7 @@ body:has(.broadcast-viewer-app),
 
 .settings-file-trigger:hover {
   border-color: #e94560;
-  background: #16213e;
+  background: #ffffff;
 }
 
 .settings-file-trigger.is-disabled {
@@ -1055,7 +1055,7 @@ body:has(.broadcast-viewer-app),
 
 .settings-clear-button {
   border: 1px solid #0f3460;
-  background: #1a1a2e;
+  background: #f7fbff;
   color: #e0e0e0;
   border-radius: 6px;
   font-size: 0.72rem;
@@ -1077,7 +1077,7 @@ body:has(.broadcast-viewer-app),
 .settings-action-button {
   width: 100%;
   border: 1px solid #0f3460;
-  background: #1a1a2e;
+  background: #f7fbff;
   color: #e0e0e0;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -1247,7 +1247,7 @@ body:has(.broadcast-viewer-app),
 .autonomous-field textarea {
   width: 100%;
   padding: 8px 10px;
-  background: rgba(10, 18, 38, 0.72);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(119, 217, 255, 0.28);
   border-radius: 9px;
   color: #f2f6ff;
@@ -1343,13 +1343,13 @@ body:has(.broadcast-viewer-app),
 .debug-panel {
   width: 100%;
   padding: 8px;
-  background: #0f3460;
+  background: #d8f3f8;
   border-radius: 8px;
 }
 
 .debug-bar-container {
   height: 8px;
-  background: #1a1a2e;
+  background: #f7fbff;
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 6px;
@@ -1413,13 +1413,13 @@ body:has(.broadcast-viewer-app),
 
 .chat-message-user {
   align-self: flex-end;
-  background: #0f3460;
+  background: #d8f3f8;
   color: #e0e0e0;
 }
 
 .chat-message-assistant {
   align-self: flex-start;
-  background: #1a1a3e;
+  background: #f2fbff;
   border: 1px solid #0f3460;
 }
 
@@ -1452,7 +1452,7 @@ body:has(.broadcast-viewer-app),
 
 .chat-input {
   padding: 12px 16px;
-  background: #16213e;
+  background: #ffffff;
   border-top: 1px solid #0f3460;
   position: relative;
   z-index: 1;
@@ -1465,7 +1465,7 @@ body:has(.broadcast-viewer-app),
 .input-row textarea {
   width: 100%;
   padding: 10px 14px;
-  background: #1a1a2e;
+  background: #f7fbff;
   border: 1px solid #0f3460;
   border-radius: 8px;
   color: #e0e0e0;
@@ -1521,14 +1521,14 @@ body:has(.broadcast-viewer-app),
 }
 
 .mic-button {
-  background: #0f3460;
+  background: #d8f3f8;
   color: #e0e0e0;
   font-size: 1.1rem;
   padding: 8px 12px;
 }
 
 .mic-button:hover:not(:disabled) {
-  background: #1a4a7a;
+  background: #d8f3f8;
 }
 
 .mic-button.mic-active {
@@ -1658,5 +1658,314 @@ body:has(.broadcast-viewer-app),
   .avatar-container {
     width: min(280px, 54vw, 26vh);
     height: min(280px, 54vw, 26vh);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Kurage White Studio Theme
+
+   Critical design rule:
+   Do not use black/dark-mode backgrounds for kvtuber viewer, broadcast,
+   or admin screens. Kurage's visual identity should feel bright,
+   polished, coastal, and business-friendly.
+   ────────────────────────────────────────────────────────────── */
+
+:root {
+  --kurage-ink: #17313a;
+  --kurage-muted: #5f7480;
+  --kurage-line: rgba(49, 121, 139, 0.18);
+  --kurage-blue: #078aa6;
+  --kurage-blue-soft: #dff8ff;
+  --kurage-coral: #ff6f7f;
+  --kurage-amber: #f5b84b;
+  --kurage-paper: #f7fcff;
+  --kurage-surface: rgba(255, 255, 255, 0.88);
+  --kurage-shadow: 0 24px 70px rgba(49, 121, 139, 0.16);
+}
+
+body {
+  background:
+    radial-gradient(circle at 18% 10%, rgba(135, 224, 239, 0.26), transparent 30%),
+    radial-gradient(circle at 90% 0%, rgba(255, 222, 170, 0.38), transparent 30%),
+    linear-gradient(180deg, #ffffff 0%, var(--kurage-paper) 54%, #eef9fc 100%);
+  color: var(--kurage-ink);
+}
+
+.app {
+  background:
+    radial-gradient(circle at 15% 8%, rgba(135, 224, 239, 0.28), transparent 30%),
+    radial-gradient(circle at 86% 8%, rgba(255, 216, 161, 0.38), transparent 28%),
+    linear-gradient(180deg, #ffffff 0%, #f4fbff 100%);
+  color: var(--kurage-ink);
+}
+
+.viewer-app .chat-panel,
+.broadcast-viewer-app,
+.broadcast-viewer-app .chat-panel {
+  background:
+    radial-gradient(circle at 12% 10%, rgba(107, 213, 231, 0.30), transparent 28%),
+    radial-gradient(circle at 85% 18%, rgba(255, 222, 170, 0.46), transparent 28%),
+    radial-gradient(circle at 60% 82%, rgba(181, 240, 225, 0.38), transparent 34%),
+    linear-gradient(180deg, #ffffff 0%, #f6fcff 48%, #eaf8fb 100%);
+}
+
+.viewer-app .chat-panel::before,
+.broadcast-viewer-app .chat-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(7, 138, 166, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(7, 138, 166, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.55), transparent 78%);
+}
+
+.broadcast-viewer-app .avatar-background {
+  padding: 0 36px 26px 0;
+}
+
+.broadcast-viewer-app .avatar-background .avatar-container {
+  filter: drop-shadow(0 22px 36px rgba(7, 138, 166, 0.18));
+}
+
+.broadcast-viewer-app .chat-log {
+  padding: 0 min(340px, 28vw) 62px 72px;
+}
+
+.broadcast-viewer-app .chat-message {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(240, 251, 255, 0.92));
+  border: 2px solid rgba(7, 138, 166, 0.22);
+  box-shadow: 0 22px 60px rgba(49, 121, 139, 0.18);
+  color: #17313a;
+  text-shadow: none;
+}
+
+.broadcast-viewer-app .chat-message::before {
+  content: "Kurage AI VTuber";
+  display: inline-flex;
+  margin: 0 0 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e5faff;
+  color: var(--kurage-blue);
+  font-size: 0.62em;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.viewer-audio-chip {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(7, 138, 166, 0.2);
+  box-shadow: 0 18px 48px rgba(49, 121, 139, 0.18);
+}
+
+.viewer-audio-chip button {
+  background: var(--kurage-blue);
+  color: #ffffff;
+}
+
+.viewer-audio-error {
+  color: #b42342;
+}
+
+.admin-page,
+.admin-simple-page {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(135, 224, 239, 0.28), transparent 30%),
+    radial-gradient(circle at 88% 0%, rgba(255, 222, 170, 0.42), transparent 32%),
+    linear-gradient(180deg, #ffffff 0%, #f5fbff 100%);
+  color: var(--kurage-ink);
+}
+
+.admin-simple-hero h1,
+.admin-hero h1,
+.admin-card h2,
+.admin-program-summary strong,
+.admin-viewer-status-label,
+.autonomous-header h2 {
+  color: var(--kurage-ink);
+}
+
+.admin-simple-hero p,
+.admin-hero p,
+.admin-hint,
+.admin-token-details,
+.admin-program-summary p,
+.admin-field span,
+.admin-viewer-status-grid span,
+.admin-viewer-status-foot,
+.admin-youtube-live-badge,
+.admin-applied-topics-header,
+.autonomous-mode-hint,
+.autonomous-field span,
+.autonomous-status-row,
+.settings-field label,
+.settings-file-hint,
+.settings-file-status,
+.debug-info,
+.chat-role,
+.chat-content-partial {
+  color: var(--kurage-muted);
+}
+
+.admin-card,
+.admin-program-card,
+.admin-viewer-status,
+.admin-program-summary,
+.admin-schedule-preview,
+.admin-applied-topics,
+.autonomous-panel,
+.settings-dialog,
+.settings-panel,
+.app-header,
+.chat-input {
+  background: var(--kurage-surface);
+  border-color: var(--kurage-line);
+  box-shadow: var(--kurage-shadow);
+  color: var(--kurage-ink);
+}
+
+.admin-viewer-status,
+.admin-program-card,
+.autonomous-panel {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 222, 170, 0.26), transparent 34%),
+    rgba(255, 255, 255, 0.9);
+}
+
+.admin-program-pill,
+.admin-state-pill,
+.admin-viewer-status-grid div,
+.admin-check-field label,
+.admin-field input,
+.admin-field select,
+.admin-field textarea,
+.autonomous-mode-pill,
+.autonomous-field input,
+.autonomous-field select,
+.autonomous-field textarea,
+.settings-field select,
+.settings-field input[type="password"],
+.settings-field input[type="text"],
+.settings-field input[type="number"],
+.settings-file-trigger,
+.settings-clear-button,
+.settings-action-button,
+.debug-panel,
+.chat-message-assistant,
+.input-row textarea {
+  background: rgba(255, 255, 255, 0.82);
+  border-color: rgba(7, 138, 166, 0.18);
+  color: var(--kurage-ink);
+}
+
+.admin-applied-topics ol,
+.admin-schedule-preview li,
+.admin-viewer-status-grid p,
+.admin-check-field label {
+  color: var(--kurage-ink);
+}
+
+.admin-kicker,
+.admin-hero code,
+.admin-hint code,
+.admin-viewer-status-main strong,
+.admin-applied-topics-header strong,
+.admin-applied-topics li::marker,
+.admin-schedule-preview strong,
+.autonomous-kicker,
+.settings-section h3,
+.app-header h1 {
+  color: var(--kurage-blue);
+}
+
+.admin-viewer-link,
+.admin-primary,
+.admin-secondary.is-active-teacher,
+.autonomous-toggle,
+.autonomous-mode-pill.is-active,
+.send-button {
+  background: var(--kurage-blue);
+  border-color: var(--kurage-blue);
+  color: #ffffff;
+}
+
+.admin-secondary,
+.admin-viewer-link-secondary,
+.autonomous-speak-now,
+.mic-button,
+.settings-button {
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(7, 138, 166, 0.22);
+  color: var(--kurage-blue);
+}
+
+.admin-secondary.is-active-live,
+.autonomous-toggle.is-live {
+  background: var(--kurage-coral);
+  border-color: var(--kurage-coral);
+  color: #ffffff;
+}
+
+.admin-danger,
+.admin-schedule-delete,
+.mic-button.mic-active {
+  background: #d9485f;
+  color: #ffffff;
+}
+
+.admin-program-pill.is-active,
+.admin-secondary.is-attention {
+  background: var(--kurage-amber);
+  border-color: var(--kurage-amber);
+  color: #3f2b05;
+}
+
+.admin-status {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(7, 138, 166, 0.22);
+  box-shadow: 0 16px 44px rgba(49, 121, 139, 0.16);
+  color: var(--kurage-ink);
+}
+
+.settings-dialog-overlay {
+  background: rgba(232, 247, 252, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.chat-empty {
+  color: #7f97a3;
+}
+
+.chat-message-user {
+  background: var(--kurage-blue);
+  color: #ffffff;
+}
+
+.input-row textarea:focus,
+.admin-field input:focus,
+.admin-field select:focus,
+.admin-field textarea:focus,
+.autonomous-field input:focus,
+.autonomous-field select:focus,
+.autonomous-field textarea:focus,
+.settings-field select:focus,
+.settings-field input[type="password"]:focus,
+.settings-field input[type="text"]:focus,
+.settings-field input[type="number"]:focus {
+  border-color: var(--kurage-blue);
+  box-shadow: 0 0 0 3px rgba(7, 138, 166, 0.12);
+}
+
+@media (max-width: 640px) {
+  .broadcast-viewer-app .chat-log {
+    padding: 12px 12px 98px;
+  }
+
+  .broadcast-viewer-app .chat-message {
+    box-shadow: 0 16px 42px rgba(49, 121, 139, 0.16);
   }
 }
