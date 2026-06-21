@@ -63,10 +63,12 @@ interface YoutubeLiveConfig {
   display: string;
 }
 
-interface KdeckBlogTaskRequest {
-  title?: string;
-  brief?: string;
-  audience?: string;
+interface KdeckChatTaskRequest {
+  message?: string;
+  history?: Array<{
+    role?: string;
+    content?: string;
+  }>;
   cwd?: string;
   executionMode?: string;
   targetAgent?: string;
@@ -364,19 +366,21 @@ function getToken(req: IncomingMessage) {
   );
 }
 
-function normalizeKdeckBlogTask(body: KdeckBlogTaskRequest) {
-  const brief = String(body.brief || '').trim();
-  const title =
-    String(body.title || '').trim() ||
-    'kvtuberにブログ投稿を依頼して、kdeckに実行させてみた';
-  const audience = String(body.audience || '').trim() || '経営者・AI活用担当者';
-  if (!brief) {
-    throw new Error('blog task brief is required');
-  }
+function normalizeKdeckChatTask(body: KdeckChatTaskRequest) {
+  const message = String(body.message || '').trim();
+  if (!message) throw new Error('message is required');
+  const history = Array.isArray(body.history)
+    ? body.history
+        .map((item) => ({
+          role: String(item?.role || '').trim(),
+          content: String(item?.content || '').trim(),
+        }))
+        .filter((item) => item.role && item.content)
+        .slice(-12)
+    : [];
   return {
-    title,
-    brief,
-    audience,
+    message,
+    history,
     cwd: String(body.cwd || KDECK_DEFAULT_CWD).trim() || KDECK_DEFAULT_CWD,
     executionMode: String(body.executionMode || 'confirm').trim() || 'confirm',
     targetAgent: String(body.targetAgent || 'local').trim() || 'local',
@@ -384,28 +388,27 @@ function normalizeKdeckBlogTask(body: KdeckBlogTaskRequest) {
   };
 }
 
-function buildKdeckBlogPrompt(task: ReturnType<typeof normalizeKdeckBlogTask>) {
+function buildKdeckChatPrompt(task: ReturnType<typeof normalizeKdeckChatTask>) {
+  const history = task.history.length
+    ? task.history
+        .map((item) => `${item.role === 'user' ? 'ユーザー' : 'kvtuber'}: ${item.content}`)
+        .join('\n')
+    : 'なし';
   return [
-    'kvtuberからの業務依頼です。',
+    'あなたは Kurage AI VTuber の業務チャット担当です。',
+    'ユーザーはkvtuberに自然文で相談・依頼します。',
+    '通常の相談なら短く自然に返答してください。',
+    '実作業が必要な依頼なら、kdeckのAgent Taskとして実行する前提で、作業内容を整理して進めてください。',
+    'ブログ投稿、ファイル編集、調査、動画制作、GitHub管理など、依頼内容はブログに限定しません。',
+    'できていないことをできたとは書かず、実行結果・未完了・次に必要なことを明確にしてください。',
     '',
-    '目的:',
-    'VWork blogに、次の内容でブログ記事を作成・登録してください。',
+    '会話履歴:',
+    history,
     '',
-    `タイトル案: ${task.title}`,
-    `想定読者: ${task.audience}`,
+    '今回のユーザー発話:',
+    task.message,
     '',
-    'ブログ内容:',
-    task.brief,
-    '',
-    '必須要件:',
-    '- vwork/blog 配下に日付つきMarkdownとして登録する。',
-    '- 経営者向けに、AI VTuberが単に話すだけでなく、kdeckへ業務依頼し、AI Agentが実行する流れを説明する。',
-    '- kvtuber、kdeck、Codex/OpenClaw/rqdb4ai、VWork blogの役割分担を明確に書く。',
-    '- 「kvtuberにブログ投稿依頼して、kdeckに実行させてみた」という実験内容が伝わるようにする。',
-    '- 公開・投稿・コミット・pushを行った場合は、最終URLとcommitを報告する。',
-    '- できていないことはできたと書かない。',
-    '',
-    'この作業は、kvtuber -> kdeck -> AI Agent の実行デモ用です。',
+    'この依頼は kvtuber -> kdeck -> AI Agent の流れで扱います。',
   ].join('\n');
 }
 
@@ -413,7 +416,7 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 }
 
-async function submitKdeckChat(prompt: string, task: ReturnType<typeof normalizeKdeckBlogTask>) {
+async function submitKdeckChat(prompt: string, task: ReturnType<typeof normalizeKdeckChatTask>) {
   if (!KDECK_TOKEN) {
     throw new Error('KVTUBER_KDECK_TOKEN or KDECK_TOKEN is not configured');
   }
@@ -663,7 +666,7 @@ function adminControlPlugin() {
       );
 
       server.middlewares.use(
-        '/control/kdeck/blog-task',
+        '/control/kdeck/chat',
         async (req: IncomingMessage, res: ServerResponse) => {
           if (req.method !== 'POST') {
             res.statusCode = 405;
@@ -678,13 +681,13 @@ function adminControlPlugin() {
 
           try {
             const rawBody = await readRequestBody(req);
-            const task = normalizeKdeckBlogTask(JSON.parse(rawBody || '{}'));
-            const prompt = buildKdeckBlogPrompt(task);
+            const task = normalizeKdeckChatTask(JSON.parse(rawBody || '{}'));
+            const prompt = buildKdeckChatPrompt(task);
             const result = await submitKdeckChat(prompt, task);
             const jobId = String(result.job_id || '').trim();
             broadcast({
               type: 'speak_now',
-              text: `kdeckにブログ投稿依頼を送りました。ジョブIDは ${jobId || '未取得'} です。完了したら結果を確認します。`,
+              text: `kdeckに依頼を送りました。ジョブIDは ${jobId || '未取得'} です。完了したら結果を確認します。`,
               instruction:
                 '業務依頼を受け付け、kdeckへ送ったことを短く自然に報告してください。',
               sentAt: Date.now(),

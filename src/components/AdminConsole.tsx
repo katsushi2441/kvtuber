@@ -68,6 +68,14 @@ type KdeckJobStatus = {
   finished?: number;
 };
 
+type KdeckChatMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  jobId?: string;
+  status?: string;
+};
+
 function getInitialToken() {
   const params = new URLSearchParams(window.location.search);
   return params.get('token') || localStorage.getItem('kurage-admin-token') || '';
@@ -96,9 +104,6 @@ function countTopics(program: BroadcastProgram) {
     .map((line) => line.trim())
     .filter(Boolean).length;
 }
-
-const DEFAULT_KDECK_BLOG_BRIEF =
-  'kvtuberにブログ投稿を依頼して、kdeckに実行させてみた。AI VTuberが単に話すだけではなく、業務依頼の窓口になり、kdeckがCodexやOpenClaw、rqdb4ai workerへ処理を渡し、VWorkブログ登録まで実行する流れを検証した。';
 
 export function AdminConsole() {
   const [token, setToken] = useState(getInitialToken);
@@ -141,10 +146,17 @@ export function AdminConsole() {
   const [scheduleTimesText, setScheduleTimesText] = useState('');
   const [youtubeStreamKeyText, setYoutubeStreamKeyText] = useState('');
   const [commentText, setCommentText] = useState('');
-  const [kdeckBlogTitle, setKdeckBlogTitle] = useState(
-    'kvtuberにブログ投稿を依頼して、kdeckに実行させてみた',
+  const [kdeckChatInput, setKdeckChatInput] = useState(
+    'kvtuberにブログ投稿を依頼して、kdeckに実行させてみた、という内容でVWork blogに記事を書いて投稿して',
   );
-  const [kdeckBlogBrief, setKdeckBlogBrief] = useState(DEFAULT_KDECK_BLOG_BRIEF);
+  const [kdeckChatMessages, setKdeckChatMessages] = useState<KdeckChatMessage[]>([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      content:
+        'kvtuberに相談や作業依頼を入力してください。ブログ投稿、調査、動画制作、ファイル編集など、必要な作業はkdeckへ渡します。',
+    },
+  ]);
   const [kdeckJob, setKdeckJob] = useState<KdeckJobStatus | null>(null);
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -359,23 +371,46 @@ export function AdminConsole() {
       setCommentText('');
     });
 
-  const sendKdeckBlogTask = () =>
-    runAction('kdeckへブログ投稿依頼を送信', async () => {
-      const title = kdeckBlogTitle.trim();
-      const brief = kdeckBlogBrief.trim();
-      if (!title) throw new Error('ブログタイトルを入力してください');
-      if (!brief) throw new Error('ブログ内容を入力してください');
-      const result = await requestWithToken('/control/kdeck/blog-task', {
+  const sendKdeckChatMessage = () =>
+    runAction('kvtuberチャットを送信', async () => {
+      const message = kdeckChatInput.trim();
+      if (!message) throw new Error('メッセージを入力してください');
+      const userMessage: KdeckChatMessage = {
+        id: `user-${Date.now()}`,
+        role: 'user',
+        content: message,
+      };
+      const nextMessages = [...kdeckChatMessages, userMessage];
+      setKdeckChatMessages(nextMessages);
+      setKdeckChatInput('');
+      const result = await requestWithToken('/control/kdeck/chat', {
         method: 'POST',
         body: JSON.stringify({
-          title,
-          brief,
-          audience: '経営者・AI活用担当者',
+          message,
+          history: kdeckChatMessages.map((item) => ({
+            role: item.role,
+            content: item.content,
+          })),
           executionMode: 'confirm',
           targetAgent: 'local',
         }),
       });
-      if (result.job) setKdeckJob(result.job as KdeckJobStatus);
+      if (result.job) {
+        const job = result.job as KdeckJobStatus;
+        setKdeckJob(job);
+        setKdeckChatMessages([
+          ...nextMessages,
+          {
+            id: `assistant-${Date.now()}`,
+            role: 'assistant',
+            content: `kdeckへ依頼しました。Job ID: ${
+              job.job_id || '未取得'
+            }。状態確認ボタンで進行状況を見られます。`,
+            jobId: job.job_id,
+            status: job.status,
+          },
+        ]);
+      }
     });
 
   const refreshKdeckJob = () =>
@@ -386,7 +421,24 @@ export function AdminConsole() {
         `/control/kdeck/task?job_id=${encodeURIComponent(jobId)}`,
         { method: 'GET' },
       );
-      if (result.job) setKdeckJob(result.job as KdeckJobStatus);
+      if (result.job) {
+        const job = result.job as KdeckJobStatus;
+        setKdeckJob(job);
+        setKdeckChatMessages((current) => [
+          ...current,
+          {
+            id: `assistant-status-${Date.now()}`,
+            role: 'assistant',
+            content: `kdeckジョブを確認しました。状態: ${
+              job.status || '-'
+            }${job.message ? ` / ${job.message}` : ''}${
+              job.error ? ` / エラー: ${job.error}` : ''
+            }`,
+            jobId: job.job_id,
+            status: job.status,
+          },
+        ]);
+      }
     });
 
   const saveYoutubeLive = () =>
@@ -882,30 +934,35 @@ export function AdminConsole() {
               </span>
             </div>
             <p className="admin-hint">
-              kvtuberが依頼を受け、kdeckへAgent Taskとして送ります。デモではVWork blog投稿を依頼します。
+              kvtuberと普通にチャットします。作業が必要な依頼はkdeckへAgent Taskとして送ります。
             </p>
+            <div className="admin-agent-chat-log">
+              {kdeckChatMessages.map((message) => (
+                <div
+                  className={`admin-agent-chat-message is-${message.role}`}
+                  key={message.id}
+                >
+                  <span>{message.role === 'user' ? 'あなた' : 'kvtuber'}</span>
+                  <p>{message.content}</p>
+                </div>
+              ))}
+            </div>
             <label className="admin-field">
-              <span>ブログタイトル</span>
-              <input
-                value={kdeckBlogTitle}
-                onChange={(event) => setKdeckBlogTitle(event.target.value)}
-              />
-            </label>
-            <label className="admin-field">
-              <span>ブログ内容・依頼文</span>
+              <span>kvtuberへの相談・作業依頼</span>
               <textarea
-                value={kdeckBlogBrief}
-                rows={6}
-                onChange={(event) => setKdeckBlogBrief(event.target.value)}
+                value={kdeckChatInput}
+                rows={5}
+                placeholder="例: この内容でVWork blogに投稿して。例: kvtuberのデモ動画を作って。例: GitHubのREADMEを整えて。"
+                onChange={(event) => setKdeckChatInput(event.target.value)}
               />
             </label>
             <div className="admin-actions admin-agent-task-actions">
               <button
                 className="admin-primary"
-                disabled={isSending || !kdeckBlogTitle.trim() || !kdeckBlogBrief.trim()}
-                onClick={sendKdeckBlogTask}
+                disabled={isSending || !kdeckChatInput.trim()}
+                onClick={sendKdeckChatMessage}
               >
-                kdeckへ依頼
+                送信
               </button>
               <button
                 className="admin-secondary"
