@@ -244,6 +244,34 @@ export function KvtuberChatPage() {
               {message.jobId && <code>Job ID: {message.jobId}</code>}
             </article>
           ))}
+          <section className="kvtuber-chat-composer">
+            <label className="admin-field kvtuber-chat-input">
+              <span>kvtuberへの相談・作業依頼</span>
+              <textarea
+                value={input}
+                rows={8}
+                placeholder="例: VWork blogに記事を書いて投稿し、その流れをkargovで録画して、kurageにデモ動画として投稿して。最後にURLとcommitを報告して。"
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                    void sendMessage();
+                  }
+                }}
+              />
+            </label>
+            <div className="kvtuber-chat-composer-footer">
+              <p>
+                送信後はkdeckの状態を自動で確認し、完了した返答をチャット欄に表示します。
+              </p>
+              <button
+                className="admin-primary kvtuber-chat-send"
+                disabled={isSending || !input.trim()}
+                onClick={() => void sendMessage()}
+              >
+                kvtuberへ送信
+              </button>
+            </div>
+          </section>
         </section>
 
         <aside className="kvtuber-chat-side">
@@ -261,29 +289,8 @@ export function KvtuberChatPage() {
               onChange={(event) => setToken(event.target.value)}
             />
           </label>
-          <label className="admin-field kvtuber-chat-input">
-            <span>kvtuberへの相談・作業依頼</span>
-            <textarea
-              value={input}
-              rows={12}
-              placeholder="例: VWork blogに記事を書いて投稿し、その流れをkargovで録画して、kurageにデモ動画として投稿して。最後にURLとcommitを報告して。"
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={(event) => {
-                if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-                  void sendMessage();
-                }
-              }}
-            />
-          </label>
-          <button
-            className="admin-primary kvtuber-chat-send"
-            disabled={isSending || !input.trim()}
-            onClick={() => void sendMessage()}
-          >
-            kvtuberへ送信
-          </button>
           <p className="admin-hint">
-            送信後はkdeckの状態を自動で確認し、完了した返答をチャット欄に表示します。
+            この画面は番組管理ではなく、kvtuberへの業務依頼専用です。入力欄は中央のメイン領域にあります。
           </p>
         </aside>
       </main>

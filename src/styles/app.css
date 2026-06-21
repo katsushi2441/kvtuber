@@ -2256,7 +2256,7 @@ body {
 .kvtuber-chat-shell {
   display: grid;
   gap: 20px;
-  grid-template-columns: minmax(0, 1fr) 390px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   margin: 0 auto;
   max-width: 1380px;
 }
@@ -2277,6 +2277,37 @@ body {
   min-height: 620px;
   overflow: auto;
   padding: 24px;
+}
+
+.kvtuber-chat-composer {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(255, 222, 170, 0.24), transparent 32%),
+    rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(7, 138, 166, 0.18);
+  border-radius: 24px;
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 18px;
+}
+
+.kvtuber-chat-composer .admin-field span {
+  color: var(--kurage-blue);
+  font-size: 0.82rem;
+}
+
+.kvtuber-chat-composer-footer {
+  align-items: center;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.kvtuber-chat-composer-footer p {
+  color: var(--kurage-muted);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .kvtuber-chat-avatar-card {
@@ -2431,12 +2462,15 @@ body {
 }
 
 .kvtuber-chat-input textarea {
-  min-height: 250px;
+  font-size: 1rem;
+  line-height: 1.7;
+  min-height: 190px;
 }
 
 .kvtuber-chat-send {
   border-radius: 16px;
-  padding: 15px 18px;
+  min-width: 180px;
+  padding: 15px 22px;
 }
 
 .settings-dialog-overlay {
@@ -2497,6 +2531,14 @@ body {
   .kvtuber-chat-log {
     max-height: none;
     min-height: 420px;
+  }
+
+  .kvtuber-chat-composer-footer {
+    grid-template-columns: 1fr;
+  }
+
+  .kvtuber-chat-send {
+    width: 100%;
   }
 
   .kvtuber-chat-avatar-card {
