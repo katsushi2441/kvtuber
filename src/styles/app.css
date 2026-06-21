@@ -1352,6 +1352,132 @@ body:has(.broadcast-viewer-app),
   object-fit: contain;
 }
 
+.inochi-kurage-rig {
+  --kurage-energy: 0;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 34%;
+  filter: drop-shadow(0 18px 22px rgba(75, 130, 175, 0.18));
+  animation: kurage-rig-breathe 4.8s ease-in-out infinite;
+}
+
+.inochi-kurage-rig.is-speaking {
+  animation-duration: 3.4s;
+}
+
+.inochi-kurage-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.inochi-kurage-bell {
+  transform-origin: 50% 31%;
+  animation: kurage-bell-float 4.6s ease-in-out infinite;
+}
+
+.inochi-kurage-inner {
+  transform-origin: 50% 36%;
+  animation: kurage-inner-sway 5.2s ease-in-out infinite;
+}
+
+.inochi-kurage-left {
+  transform-origin: 40% 38%;
+  animation: kurage-left-sway 5.8s ease-in-out infinite;
+}
+
+.inochi-kurage-right {
+  transform-origin: 60% 38%;
+  animation: kurage-right-sway 6.1s ease-in-out infinite;
+}
+
+.inochi-kurage-mouth {
+  transform-origin: 58% 25%;
+  opacity: 1;
+}
+
+.inochi-kurage-mouth-open {
+  opacity: calc(0.72 + var(--kurage-energy) * 0.28);
+  transform: scaleY(calc(1 + var(--kurage-energy) * 0.22));
+  filter: saturate(calc(1 + var(--kurage-energy) * 0.25));
+}
+
+.inochi-kurage-blink {
+  position: absolute;
+  width: 7.4%;
+  height: 1.1%;
+  border-radius: 999px;
+  background: #17356f;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.65);
+  opacity: 0.82;
+  transform: rotate(1deg);
+}
+
+.inochi-kurage-blink-left {
+  left: 45.2%;
+  top: 24.4%;
+}
+
+.inochi-kurage-blink-right {
+  left: 65.8%;
+  top: 24.4%;
+}
+
+@keyframes kurage-rig-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2.4%) scale(1.018);
+  }
+}
+
+@keyframes kurage-bell-float {
+  0%,
+  100% {
+    transform: rotate(-0.5deg) scaleX(1);
+  }
+  50% {
+    transform: rotate(0.8deg) scaleX(calc(1.006 + var(--kurage-energy) * 0.012));
+  }
+}
+
+@keyframes kurage-inner-sway {
+  0%,
+  100% {
+    transform: translateX(-0.8%) rotate(-1.1deg);
+  }
+  50% {
+    transform: translateX(1.1%) rotate(1.4deg);
+  }
+}
+
+@keyframes kurage-left-sway {
+  0%,
+  100% {
+    transform: translateX(1.2%) rotate(2.4deg);
+  }
+  50% {
+    transform: translateX(-1.8%) rotate(-3.2deg);
+  }
+}
+
+@keyframes kurage-right-sway {
+  0%,
+  100% {
+    transform: translateX(-1.2%) rotate(-2.5deg);
+  }
+  50% {
+    transform: translateX(1.8%) rotate(3.3deg);
+  }
+}
+
 .debug-panel {
   width: 100%;
   padding: 8px;

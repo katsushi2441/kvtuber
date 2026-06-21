@@ -1,0 +1,104 @@
+{
+  "name": "Kurage Inochi2D Starter Layer Kit",
+  "format": "source-layer-kit",
+  "canvas": {
+    "width": 1200,
+    "height": 1200
+  },
+  "source": "public/avatar canonical Kurage PNG avatar",
+  "notes": [
+    "This is not a finished .inp puppet. It is a starter layer kit for Inochi Creator.",
+    "Import the PNG layers into Inochi Creator, mesh bell/tentacle layers, then export .inp.",
+    "All layers keep the same canvas size so their positions line up without manual offsets."
+  ],
+  "layers": [
+    {
+      "file": "00_shadow_reference_full.png",
+      "source": "kurage_avatar_idle.png",
+      "box": [
+        0,
+        0,
+        1200,
+        1200
+      ],
+      "role": "reference only; hide before final rig if desired"
+    },
+    {
+      "file": "10_bell_body.png",
+      "source": "kurage_avatar_idle.png",
+      "box": [
+        205,
+        0,
+        1005,
+        500
+      ],
+      "role": "main bell/body mesh; rig for breathe, tilt, and squash"
+    },
+    {
+      "file": "20_inner_tentacles.png",
+      "source": "kurage_avatar_idle.png",
+      "box": [
+        310,
+        355,
+        920,
+        1200
+      ],
+      "role": "central tentacle group; rig for slow vertical sway"
+    },
+    {
+      "file": "30_left_tentacles.png",
+      "source": "kurage_avatar_idle.png",
+      "box": [
+        145,
+        380,
+        520,
+        1120
+      ],
+      "role": "left ribbon/tentacle group; rig for delayed side sway"
+    },
+    {
+      "file": "40_right_tentacles.png",
+      "source": "kurage_avatar_idle.png",
+      "box": [
+        690,
+        380,
+        1060,
+        1120
+      ],
+      "role": "right ribbon/tentacle group; rig for delayed side sway"
+    },
+    {
+      "file": "50_mouth_closed.png",
+      "source": "kurage_avatar_idle.png",
+      "box": [
+        630,
+        260,
+        760,
+        330
+      ],
+      "role": "mouth closed expression layer"
+    },
+    {
+      "file": "51_mouth_open.png",
+      "source": "kurage_avatar_talk_open.png",
+      "box": [
+        630,
+        260,
+        760,
+        330
+      ],
+      "role": "mouth open expression layer driven by audio volume"
+    },
+    {
+      "file": "52_mouth_wide.png",
+      "source": "kurage_avatar_talk_wide.png",
+      "box": [
+        630,
+        260,
+        760,
+        330
+      ],
+      "role": "wide mouth expression for higher audio volume"
+    }
+  ]
+}

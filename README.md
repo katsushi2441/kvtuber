@@ -26,6 +26,7 @@ Do not use black or dark-mode backgrounds for kvtuber viewer, broadcast viewer, 
 
 - React/Vite AI VTuber viewer
 - PNG/SVG avatar display and audio-driven lip sync
+- Inochi2D-style layered Kurage rig prototype using canonical PNG layer cuts
 - admin console for programs, schedules, and comment interruption
 - normal viewer URL for regular viewing and interaction checks: `/viewer`
 - dedicated broadcast viewer URL for OBS/YouTube capture: `/viewer?broadcast=1`
@@ -83,3 +84,15 @@ The RTMP helper is configured through `storage/youtube-live.json` or the admin A
 ## Relationship to Kurage
 
 `kvtuber` is the reusable AI avatar runtime. Application repositories can provide brand-specific avatars, scripts, content packs, and deployment settings.
+
+## Kurage Inochi2D Starter Kit
+
+The canonical Kurage PNG avatar now has an Inochi2D-oriented starter layer kit in `public/avatar/inochi2d/`. It is not a finished `.inp` puppet yet; it is a layered source package for Inochi Creator plus a browser-side Inochi2D-style rig prototype used by the viewer.
+
+Regenerate the layer kit after updating `public/avatar/kurage_avatar_*.png`:
+
+```bash
+python3 scripts/make-kurage-inochi2d-kit.py
+```
+
+Manual Inochi Creator work is still required for a real `.inp` puppet: mesh creation, deformation parameters, physics, and export.
