@@ -22,6 +22,11 @@ const PROGRAMS_PATH = join(__dirname, 'storage/programs.json');
 const SCHEDULE_PATH = join(__dirname, 'storage/schedule.json');
 const YOUTUBE_LIVE_PATH = join(__dirname, 'storage/youtube-live.json');
 const YOUTUBE_LIVE_SCRIPT = join(__dirname, 'scripts/youtube-live-rtmp.mjs');
+const KDECK_BASE_URL = (process.env.KVTUBER_KDECK_BASE_URL || 'http://127.0.0.1:18301').replace(/\/+$/, '');
+const KDECK_TOKEN = process.env.KVTUBER_KDECK_TOKEN || process.env.KDECK_TOKEN || '';
+const KDECK_DEFAULT_CWD = process.env.KVTUBER_KDECK_DEFAULT_CWD || '/home/kojima/work/vwork';
+const KDECK_DEFAULT_LOCAL_CWD = process.env.KVTUBER_KDECK_LOCAL_CWD || '/home/kojima/work/kdeck';
+const KDECK_DEFAULT_MODEL = process.env.KVTUBER_KDECK_MODEL || 'gpt-5.5';
 
 interface BroadcastProgram {
   id: string;
@@ -56,6 +61,16 @@ interface YoutubeLiveConfig {
   videoBitrate: string;
   audioBitrate: string;
   display: string;
+}
+
+interface KdeckBlogTaskRequest {
+  title?: string;
+  brief?: string;
+  audience?: string;
+  cwd?: string;
+  executionMode?: string;
+  targetAgent?: string;
+  model?: string;
 }
 
 function readRequestBody(req: IncomingMessage) {
@@ -349,6 +364,103 @@ function getToken(req: IncomingMessage) {
   );
 }
 
+function normalizeKdeckBlogTask(body: KdeckBlogTaskRequest) {
+  const brief = String(body.brief || '').trim();
+  const title =
+    String(body.title || '').trim() ||
+    'kvtuberにブログ投稿を依頼して、kdeckに実行させてみた';
+  const audience = String(body.audience || '').trim() || '経営者・AI活用担当者';
+  if (!brief) {
+    throw new Error('blog task brief is required');
+  }
+  return {
+    title,
+    brief,
+    audience,
+    cwd: String(body.cwd || KDECK_DEFAULT_CWD).trim() || KDECK_DEFAULT_CWD,
+    executionMode: String(body.executionMode || 'confirm').trim() || 'confirm',
+    targetAgent: String(body.targetAgent || 'local').trim() || 'local',
+    model: String(body.model || KDECK_DEFAULT_MODEL).trim() || KDECK_DEFAULT_MODEL,
+  };
+}
+
+function buildKdeckBlogPrompt(task: ReturnType<typeof normalizeKdeckBlogTask>) {
+  return [
+    'kvtuberからの業務依頼です。',
+    '',
+    '目的:',
+    'VWork blogに、次の内容でブログ記事を作成・登録してください。',
+    '',
+    `タイトル案: ${task.title}`,
+    `想定読者: ${task.audience}`,
+    '',
+    'ブログ内容:',
+    task.brief,
+    '',
+    '必須要件:',
+    '- vwork/blog 配下に日付つきMarkdownとして登録する。',
+    '- 経営者向けに、AI VTuberが単に話すだけでなく、kdeckへ業務依頼し、AI Agentが実行する流れを説明する。',
+    '- kvtuber、kdeck、Codex/OpenClaw/rqdb4ai、VWork blogの役割分担を明確に書く。',
+    '- 「kvtuberにブログ投稿依頼して、kdeckに実行させてみた」という実験内容が伝わるようにする。',
+    '- 公開・投稿・コミット・pushを行った場合は、最終URLとcommitを報告する。',
+    '- できていないことはできたと書かない。',
+    '',
+    'この作業は、kvtuber -> kdeck -> AI Agent の実行デモ用です。',
+  ].join('\n');
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+async function submitKdeckChat(prompt: string, task: ReturnType<typeof normalizeKdeckBlogTask>) {
+  if (!KDECK_TOKEN) {
+    throw new Error('KVTUBER_KDECK_TOKEN or KDECK_TOKEN is not configured');
+  }
+
+  const response = await fetch(`${KDECK_BASE_URL}/api/chat`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${KDECK_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt,
+      cwd: task.cwd,
+      local_cwd: KDECK_DEFAULT_LOCAL_CWD,
+      model: task.model,
+      execution_mode: task.executionMode,
+      target_agent: task.targetAgent,
+      remote_llm_backend: 'codex-cli',
+      remote_model: task.model,
+    }),
+  });
+  const result = asRecord(await response.json().catch(() => ({})));
+  if (!response.ok) {
+    throw new Error(String(result.detail || result.error || `kdeck HTTP ${response.status}`));
+  }
+  return result;
+}
+
+async function loadKdeckChatJob(jobId: string) {
+  if (!KDECK_TOKEN) {
+    throw new Error('KVTUBER_KDECK_TOKEN or KDECK_TOKEN is not configured');
+  }
+  const safeJobId = jobId.trim().replace(/[^a-zA-Z0-9_-]/g, '');
+  if (!safeJobId) throw new Error('job_id is required');
+  const response = await fetch(`${KDECK_BASE_URL}/api/chat/${encodeURIComponent(safeJobId)}`, {
+    headers: {
+      Authorization: `Bearer ${KDECK_TOKEN}`,
+      Accept: 'application/json',
+    },
+  });
+  const result = asRecord(await response.json().catch(() => ({})));
+  if (!response.ok) {
+    throw new Error(String(result.detail || result.error || `kdeck HTTP ${response.status}`));
+  }
+  return result;
+}
+
 function adminControlPlugin() {
   const clients = new Set<ServerResponse>();
   const statusClients = new Set<ServerResponse>();
@@ -542,6 +654,74 @@ function adminControlPlugin() {
               });
             }
             sendJson(res, 200, { ok: true, clients: clients.size });
+          } catch (error) {
+            sendJson(res, 400, {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        },
+      );
+
+      server.middlewares.use(
+        '/control/kdeck/blog-task',
+        async (req: IncomingMessage, res: ServerResponse) => {
+          if (req.method !== 'POST') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+
+          if (getToken(req) !== ADMIN_TOKEN) {
+            sendJson(res, 403, { error: 'invalid admin token' });
+            return;
+          }
+
+          try {
+            const rawBody = await readRequestBody(req);
+            const task = normalizeKdeckBlogTask(JSON.parse(rawBody || '{}'));
+            const prompt = buildKdeckBlogPrompt(task);
+            const result = await submitKdeckChat(prompt, task);
+            const jobId = String(result.job_id || '').trim();
+            broadcast({
+              type: 'speak_now',
+              text: `kdeckにブログ投稿依頼を送りました。ジョブIDは ${jobId || '未取得'} です。完了したら結果を確認します。`,
+              instruction:
+                '業務依頼を受け付け、kdeckへ送ったことを短く自然に報告してください。',
+              sentAt: Date.now(),
+            });
+            sendJson(res, 200, {
+              ok: true,
+              kdeckBaseUrl: KDECK_BASE_URL,
+              job: result,
+              promptPreview: prompt.slice(0, 1200),
+            });
+          } catch (error) {
+            sendJson(res, 400, {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        },
+      );
+
+      server.middlewares.use(
+        '/control/kdeck/task',
+        async (req: IncomingMessage, res: ServerResponse) => {
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.end('Method Not Allowed');
+            return;
+          }
+
+          if (getToken(req) !== ADMIN_TOKEN) {
+            sendJson(res, 403, { error: 'invalid admin token' });
+            return;
+          }
+
+          try {
+            const url = new URL(req.url || '/', 'http://localhost');
+            const jobId = String(url.searchParams.get('job_id') || '').trim();
+            const result = await loadKdeckChatJob(jobId);
+            sendJson(res, 200, { ok: true, job: result });
           } catch (error) {
             sendJson(res, 400, {
               error: error instanceof Error ? error.message : String(error),

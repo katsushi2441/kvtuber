@@ -56,6 +56,18 @@ type YoutubeLiveStatus = {
   };
 };
 
+type KdeckJobStatus = {
+  job_id?: string;
+  status?: string;
+  message?: string;
+  error?: string;
+  target_agent?: string;
+  execution_mode?: string;
+  cwd?: string;
+  created?: number;
+  finished?: number;
+};
+
 function getInitialToken() {
   const params = new URLSearchParams(window.location.search);
   return params.get('token') || localStorage.getItem('kurage-admin-token') || '';
@@ -84,6 +96,9 @@ function countTopics(program: BroadcastProgram) {
     .map((line) => line.trim())
     .filter(Boolean).length;
 }
+
+const DEFAULT_KDECK_BLOG_BRIEF =
+  'kvtuberにブログ投稿を依頼して、kdeckに実行させてみた。AI VTuberが単に話すだけではなく、業務依頼の窓口になり、kdeckがCodexやOpenClaw、rqdb4ai workerへ処理を渡し、VWorkブログ登録まで実行する流れを検証した。';
 
 export function AdminConsole() {
   const [token, setToken] = useState(getInitialToken);
@@ -126,6 +141,11 @@ export function AdminConsole() {
   const [scheduleTimesText, setScheduleTimesText] = useState('');
   const [youtubeStreamKeyText, setYoutubeStreamKeyText] = useState('');
   const [commentText, setCommentText] = useState('');
+  const [kdeckBlogTitle, setKdeckBlogTitle] = useState(
+    'kvtuberにブログ投稿を依頼して、kdeckに実行させてみた',
+  );
+  const [kdeckBlogBrief, setKdeckBlogBrief] = useState(DEFAULT_KDECK_BLOG_BRIEF);
+  const [kdeckJob, setKdeckJob] = useState<KdeckJobStatus | null>(null);
   const [status, setStatus] = useState('');
   const [isSending, setIsSending] = useState(false);
 
@@ -337,6 +357,36 @@ export function AdminConsole() {
         }),
       });
       setCommentText('');
+    });
+
+  const sendKdeckBlogTask = () =>
+    runAction('kdeckへブログ投稿依頼を送信', async () => {
+      const title = kdeckBlogTitle.trim();
+      const brief = kdeckBlogBrief.trim();
+      if (!title) throw new Error('ブログタイトルを入力してください');
+      if (!brief) throw new Error('ブログ内容を入力してください');
+      const result = await requestWithToken('/control/kdeck/blog-task', {
+        method: 'POST',
+        body: JSON.stringify({
+          title,
+          brief,
+          audience: '経営者・AI活用担当者',
+          executionMode: 'confirm',
+          targetAgent: 'local',
+        }),
+      });
+      if (result.job) setKdeckJob(result.job as KdeckJobStatus);
+    });
+
+  const refreshKdeckJob = () =>
+    runAction('kdeckジョブ状態を確認', async () => {
+      const jobId = kdeckJob?.job_id?.trim();
+      if (!jobId) throw new Error('確認するkdeckジョブがありません');
+      const result = await requestWithToken(
+        `/control/kdeck/task?job_id=${encodeURIComponent(jobId)}`,
+        { method: 'GET' },
+      );
+      if (result.job) setKdeckJob(result.job as KdeckJobStatus);
     });
 
   const saveYoutubeLive = () =>
@@ -822,6 +872,71 @@ export function AdminConsole() {
             <p className="admin-hint">
               返答後は自動で番組台本の続きに戻ります。
             </p>
+          </div>
+
+          <div className="admin-agent-task-panel">
+            <div className="admin-agent-task-header">
+              <h3>kdeckへAI業務依頼</h3>
+              <span className="admin-agent-task-badge">
+                {kdeckJob?.status || '未送信'}
+              </span>
+            </div>
+            <p className="admin-hint">
+              kvtuberが依頼を受け、kdeckへAgent Taskとして送ります。デモではVWork blog投稿を依頼します。
+            </p>
+            <label className="admin-field">
+              <span>ブログタイトル</span>
+              <input
+                value={kdeckBlogTitle}
+                onChange={(event) => setKdeckBlogTitle(event.target.value)}
+              />
+            </label>
+            <label className="admin-field">
+              <span>ブログ内容・依頼文</span>
+              <textarea
+                value={kdeckBlogBrief}
+                rows={6}
+                onChange={(event) => setKdeckBlogBrief(event.target.value)}
+              />
+            </label>
+            <div className="admin-actions admin-agent-task-actions">
+              <button
+                className="admin-primary"
+                disabled={isSending || !kdeckBlogTitle.trim() || !kdeckBlogBrief.trim()}
+                onClick={sendKdeckBlogTask}
+              >
+                kdeckへ依頼
+              </button>
+              <button
+                className="admin-secondary"
+                disabled={isSending || !kdeckJob?.job_id}
+                onClick={refreshKdeckJob}
+              >
+                状態確認
+              </button>
+            </div>
+            {kdeckJob?.job_id && (
+              <div className="admin-agent-task-result">
+                <div>
+                  <span>Job ID</span>
+                  <strong>{kdeckJob.job_id}</strong>
+                </div>
+                <div>
+                  <span>状態</span>
+                  <strong>{kdeckJob.status || '-'}</strong>
+                </div>
+                <div>
+                  <span>実行</span>
+                  <strong>
+                    {kdeckJob.target_agent || 'local'} /{' '}
+                    {kdeckJob.execution_mode || 'confirm'}
+                  </strong>
+                </div>
+                {(kdeckJob.message || kdeckJob.error) && (
+                  <p>{kdeckJob.message || kdeckJob.error}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <details className="admin-token-details">

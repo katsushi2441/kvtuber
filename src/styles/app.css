@@ -261,7 +261,8 @@ body:has(.broadcast-viewer-app),
 
 .admin-schedule-panel,
 .admin-youtube-live-panel,
-.admin-comment-interrupt {
+.admin-comment-interrupt,
+.admin-agent-task-panel {
   margin-top: 18px;
   padding-top: 18px;
   border-top: 1px solid rgba(119, 217, 255, 0.18);
@@ -269,10 +270,70 @@ body:has(.broadcast-viewer-app),
 
 .admin-schedule-panel h3,
 .admin-youtube-live-panel h3,
-.admin-comment-interrupt h3 {
+.admin-comment-interrupt h3,
+.admin-agent-task-panel h3 {
   color: #fff;
   font-size: 0.96rem;
   margin-bottom: 10px;
+}
+
+.admin-agent-task-header {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.admin-agent-task-badge {
+  background: rgba(119, 217, 255, 0.14);
+  border: 1px solid rgba(119, 217, 255, 0.28);
+  border-radius: 999px;
+  color: #dff7ff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  padding: 4px 9px;
+  white-space: nowrap;
+}
+
+.admin-agent-task-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.admin-agent-task-result {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(119, 217, 255, 0.22);
+  border-radius: 14px;
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.admin-agent-task-result div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-agent-task-result span {
+  color: #527386;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.admin-agent-task-result strong {
+  color: #17384a;
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+.admin-agent-task-result p {
+  color: #294e61;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  max-height: 170px;
+  overflow: auto;
+  white-space: pre-wrap;
 }
 
 .admin-youtube-live-header {
