@@ -115,16 +115,16 @@ Production throttling is enabled by default so worker bursts do not create back-
 
 ```bash
 # Defaults: wait for at least 5 new shorts, reserve 5 at a time,
-# leave 4 hours between streams, and cap automatic streams at 6 per day.
+# leave 8 hours between streams, and cap automatic streams at 3 per day.
 KURAGE_SHORTS_BATCH_SIZE=5
 KURAGE_SHORTS_RESERVATION_BATCH_SIZE=5
 KURAGE_SHORTS_MAX_BATCH_SIZE=10
-KURAGE_SHORTS_LIVE_COOLDOWN_HOURS=4
-KURAGE_SHORTS_MAX_STREAMS_PER_DAY=6
+KURAGE_SHORTS_LIVE_COOLDOWN_HOURS=8
+KURAGE_SHORTS_MAX_STREAMS_PER_DAY=3
 KURAGE_SHORTS_POLICY_TIME_ZONE="Asia/Tokyo"
 ```
 
-If 10 to 20 videos are generated in a short worker burst, they are reserved as 5-video batches spaced by the cooldown window instead of triggering immediate consecutive live streams. Use `npm run youtube-live:shorts-watch -- status` to inspect the reservation list and next scheduled start.
+If 10 to 20 videos are generated in a short worker burst, they are reserved as 5-video batches spaced by the cooldown window instead of triggering immediate consecutive live streams. The production cadence is three automatic live streams per day at roughly 8-hour intervals. Use `npm run youtube-live:shorts-watch -- status` to inspect the reservation list and next scheduled start.
 
 To recover from a stopped live stream, requeue every short after the problem video and reserve the first recovered batch immediately:
 
