@@ -15,6 +15,10 @@ const WATCHER_SCRIPT = join(ROOT, 'scripts/watch-kurage-shorts-live.mjs');
 const X_BROWSER_USE_SCRIPT = join(ROOT, 'scripts/x-post-browser-use.py');
 const DEFAULT_INTERVAL_SECONDS = 60;
 const DEFAULT_BATCH_SIZE = 5;
+const DEFAULT_MAX_BATCH_SIZE = 10;
+const DEFAULT_COOLDOWN_HOURS = 4;
+const DEFAULT_MAX_STREAMS_PER_DAY = 4;
+const DEFAULT_POLICY_TIME_ZONE = 'Asia/Tokyo';
 const DEFAULT_SCAN_LIMIT = 200;
 const DEFAULT_AIXSNS_API = 'https://aixec.exbridge.jp/api.php?path=posts';
 const DEFAULT_BROWSER_AGENT_PYTHON = '/home/kojima/work/browser_agent/.venv/bin/python';
@@ -35,6 +39,13 @@ function saveJson(path, value) {
 function log(message, extra = undefined) {
   const line = `[${new Date().toISOString()}] ${message}${extra ? ` ${JSON.stringify(extra)}` : ''}`;
   console.log(line);
+}
+
+function numberEnv(name, fallback) {
+  const raw = process.env[name];
+  if (raw === undefined || String(raw).trim() === '') return fallback;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : fallback;
 }
 
 function runNode(args, options = {}) {
@@ -228,7 +239,7 @@ function buildAnnouncementContent(items, liveUrl) {
   return [
     'Kurageショート動画のYouTube Live配信を開始しました。',
     '',
-    '新しく追加されたショート動画5本を連続で配信中です。',
+    `新しく追加されたショート動画${items.length}本を連続で配信中です。`,
     liveUrl,
     '',
     titles,
@@ -312,7 +323,7 @@ async function postAixsnsAnnouncement(items, liveUrl, content = buildAnnouncemen
       author: 'kurage',
       content,
       title: 'Kurageショート動画 YouTube Live配信開始',
-      description: '新しく追加されたKurageショート動画5本の連続ライブ配信告知',
+      description: `新しく追加されたKurageショート動画${items.length}本の連続ライブ配信告知`,
       kind: 'youtube_live_announcement',
       source_url: liveUrl,
     }),
@@ -412,6 +423,93 @@ function saveState(state) {
   });
 }
 
+function getMinBatchSize() {
+  return Math.max(1, Math.floor(numberEnv('KURAGE_SHORTS_BATCH_SIZE', DEFAULT_BATCH_SIZE)));
+}
+
+function getMaxBatchSize() {
+  return Math.max(getMinBatchSize(), Math.floor(numberEnv('KURAGE_SHORTS_MAX_BATCH_SIZE', DEFAULT_MAX_BATCH_SIZE)));
+}
+
+function getCooldownHours() {
+  return Math.max(0, numberEnv('KURAGE_SHORTS_LIVE_COOLDOWN_HOURS', DEFAULT_COOLDOWN_HOURS));
+}
+
+function getMaxStreamsPerDay() {
+  return Math.max(1, Math.floor(numberEnv('KURAGE_SHORTS_MAX_STREAMS_PER_DAY', DEFAULT_MAX_STREAMS_PER_DAY)));
+}
+
+function getPolicyTimeZone() {
+  return String(process.env.KURAGE_SHORTS_POLICY_TIME_ZONE || DEFAULT_POLICY_TIME_ZONE);
+}
+
+function dateKeyInTimeZone(date, timeZone = getPolicyTimeZone()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
+function autoLiveBatches(state) {
+  return (state.batches || []).filter((batch) => batch.reason === 'auto-live-started' && batch.recordedAt);
+}
+
+function streamPolicyStatus(state, now = new Date()) {
+  const batches = autoLiveBatches(state);
+  const latest = batches
+    .map((batch) => ({ ...batch, startedAtMs: Date.parse(batch.recordedAt) }))
+    .filter((batch) => Number.isFinite(batch.startedAtMs))
+    .sort((a, b) => b.startedAtMs - a.startedAtMs)[0] || null;
+  const cooldownHours = getCooldownHours();
+  const cooldownMs = cooldownHours * 60 * 60 * 1000;
+  const nowMs = now.getTime();
+  const nextAllowedAtMs = latest ? latest.startedAtMs + cooldownMs : 0;
+  const cooldownRemainingSeconds = Math.max(0, Math.ceil((nextAllowedAtMs - nowMs) / 1000));
+  const todayKey = dateKeyInTimeZone(now);
+  const streamsToday = batches.filter((batch) => {
+    const date = new Date(batch.recordedAt);
+    return Number.isFinite(date.getTime()) && dateKeyInTimeZone(date) === todayKey;
+  }).length;
+  const maxStreamsPerDay = getMaxStreamsPerDay();
+
+  if (cooldownRemainingSeconds > 0) {
+    return {
+      canStart: false,
+      reason: 'cooldown-active',
+      cooldownHours,
+      cooldownRemainingSeconds,
+      nextAllowedAt: new Date(nextAllowedAtMs).toISOString(),
+      streamsToday,
+      maxStreamsPerDay,
+      todayKey,
+    };
+  }
+  if (streamsToday >= maxStreamsPerDay) {
+    return {
+      canStart: false,
+      reason: 'daily-limit-reached',
+      cooldownHours,
+      cooldownRemainingSeconds: 0,
+      streamsToday,
+      maxStreamsPerDay,
+      todayKey,
+    };
+  }
+  return {
+    canStart: true,
+    reason: 'allowed',
+    cooldownHours,
+    cooldownRemainingSeconds: 0,
+    streamsToday,
+    maxStreamsPerDay,
+    todayKey,
+  };
+}
+
 function markStreamed(jobIds, reason, extra = {}) {
   const state = loadState();
   const streamed = new Set(state.streamedJobIds);
@@ -465,17 +563,29 @@ function pendingShorts() {
 }
 
 async function runOnce() {
-  const batchSize = Number(process.env.KURAGE_SHORTS_BATCH_SIZE || DEFAULT_BATCH_SIZE);
+  const batchSize = getMinBatchSize();
+  const maxBatchSize = getMaxBatchSize();
   const live = liveStatus();
   if (live.running) {
     log('live stream is already running; watcher will wait', { ffmpegPid: live.ffmpegPid });
     return { started: false, reason: 'live-running' };
   }
 
-  const { pending } = pendingShorts();
+  const { state, pending } = pendingShorts();
   if (pending.length < batchSize) {
     log('not enough new Kurage shorts yet', { pending: pending.length, needed: batchSize });
     return { started: false, reason: 'not-enough-pending', pending: pending.length };
+  }
+
+  const policy = streamPolicyStatus(state);
+  if (!policy.canStart) {
+    log('Kurage shorts live policy is waiting before next stream', {
+      pending: pending.length,
+      needed: batchSize,
+      maxBatchSize,
+      policy,
+    });
+    return { started: false, reason: policy.reason, pending: pending.length, policy };
   }
 
   const configuredAnnouncementLiveUrl = getAnnouncementLiveUrl();
@@ -488,9 +598,12 @@ async function runOnce() {
     return { started: false, reason: 'missing-youtube-live-url', pending: pending.length };
   }
 
-  const batch = pending.slice(0, batchSize);
+  const batch = pending.slice(0, Math.min(maxBatchSize, pending.length));
   log('starting YouTube Live for new Kurage shorts batch', {
     jobIds: batch.map((item) => item.jobId),
+    batchSize: batch.length,
+    pending: pending.length,
+    policy,
   });
   const result = startBatch(batch);
   const resolvedAnnouncementLiveUrl = await resolveAnnouncementLiveUrlAfterStart();
@@ -558,6 +671,7 @@ function status() {
   const live = liveStatus();
   const pid = readPid(WATCHER_PID_PATH);
   const xAuth = twitterAuthStatus();
+  const policy = streamPolicyStatus(state);
   console.log(
     JSON.stringify(
       {
@@ -592,6 +706,11 @@ function status() {
         streamedCount: state.streamedJobIds.length,
         pendingCount: pending.length,
         pendingJobIds: pending.map((item) => item.jobId),
+        streamPolicy: {
+          minBatchSize: getMinBatchSize(),
+          maxBatchSize: getMaxBatchSize(),
+          ...policy,
+        },
       },
       null,
       2,
