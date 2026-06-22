@@ -107,7 +107,7 @@ YOUTUBE_LIVE_URL="https://www.youtube.com/..." \
 npm run youtube-live:shorts-watch -- start
 ```
 
-Set either `YOUTUBE_LIVE_URL` for the exact broadcast URL or `YOUTUBE_CHANNEL_LIVE_URL` for the channel live page. The watcher refuses to start a new automatic stream when AIxSNS/X announcements are enabled but no announcement URL is configured. This avoids the bad state where YouTube Live starts but both announcements are skipped with `missing-youtube-live-url`. Set `KURAGE_SHORTS_REQUIRE_LIVE_URL=0` only for local tests where announcements do not matter.
+Set either `YOUTUBE_LIVE_URL` for the exact broadcast URL or `YOUTUBE_CHANNEL_LIVE_URL` for the channel live page. When only the channel live page is configured, the watcher starts the RTMP stream and then uses `yt-dlp` to resolve the active `watch?v=...` URL before posting AIxSNS/X announcements. If resolution is not available yet, it retries for up to about a minute and then falls back to the channel live page. The watcher refuses to start a new automatic stream when announcements are enabled but no announcement URL of either kind is configured. Set `KURAGE_SHORTS_REQUIRE_LIVE_URL=0` only for local tests where announcements do not matter.
 
 When an announcement URL is available, the watcher posts a live announcement to AIxSNS after the RTMP stream starts. AgentReach is intentionally not used for X posting because its supported scope is internet/platform retrieval, not write actions such as posting, replying, or liking.
 

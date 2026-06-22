@@ -124,6 +124,78 @@ function getAnnouncementLiveUrl() {
   return getYoutubeLiveUrl() || getYoutubeChannelLiveUrl();
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizeYoutubeWatchUrl(url) {
+  const text = String(url || '').trim();
+  if (!text) return '';
+  try {
+    const parsed = new URL(text);
+    if (parsed.hostname === 'youtu.be') {
+      const id = parsed.pathname.replace(/^\/+/, '').split('/')[0];
+      return id ? `https://www.youtube.com/watch?v=${id}` : text;
+    }
+    const id = parsed.searchParams.get('v');
+    if (id && /(^|\.)youtube\.com$/.test(parsed.hostname)) {
+      return `https://www.youtube.com/watch?v=${id}`;
+    }
+  } catch {}
+  return text;
+}
+
+function resolveYoutubeChannelLiveUrlOnce(channelLiveUrl) {
+  if (!channelLiveUrl || !commandExists('yt-dlp')) return '';
+  const result = spawnSync(
+    'yt-dlp',
+    [
+      '--no-warnings',
+      '--no-playlist',
+      '--skip-download',
+      '--print',
+      'webpage_url',
+      channelLiveUrl,
+    ],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024,
+      timeout: Number(process.env.KURAGE_SHORTS_YTDLP_TIMEOUT_MS || 20000),
+    },
+  );
+  if (result.status !== 0) return '';
+  const lines = String(result.stdout || '')
+    .split('\n')
+    .map((line) => normalizeYoutubeWatchUrl(line))
+    .filter(Boolean);
+  return lines.find((line) => /youtube\.com\/watch\?v=/.test(line)) || '';
+}
+
+async function resolveAnnouncementLiveUrlAfterStart() {
+  const exactLiveUrl = getYoutubeLiveUrl();
+  if (exactLiveUrl) {
+    return { url: exactLiveUrl, source: 'configured-youtube-live-url' };
+  }
+
+  const channelLiveUrl = getYoutubeChannelLiveUrl();
+  if (!channelLiveUrl) return { url: '', source: 'missing' };
+
+  const attempts = Number(process.env.KURAGE_SHORTS_LIVE_URL_RESOLVE_ATTEMPTS || 12);
+  const delayMs = Number(process.env.KURAGE_SHORTS_LIVE_URL_RESOLVE_DELAY_MS || 5000);
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const resolved = resolveYoutubeChannelLiveUrlOnce(channelLiveUrl);
+    if (resolved && resolved !== normalizeYoutubeWatchUrl(channelLiveUrl)) {
+      log('resolved YouTube channel live URL to watch URL', { attempt, url: resolved });
+      return { url: resolved, source: 'resolved-channel-live-url', attempts: attempt };
+    }
+    log('YouTube watch URL not resolved yet', { attempt, attempts, channelLiveUrl });
+    if (attempt < attempts) await sleep(delayMs);
+  }
+
+  return { url: channelLiveUrl, source: 'channel-live-url-fallback', attempts };
+}
+
 function announcementsNeedLiveUrl() {
   const aixsnsEnabled = String(process.env.KURAGE_SHORTS_ANNOUNCE_AIXSNS || '1') !== '0';
   const xEnabled = String(process.env.KURAGE_SHORTS_ANNOUNCE_X || '1') !== '0';
@@ -406,8 +478,8 @@ async function runOnce() {
     return { started: false, reason: 'not-enough-pending', pending: pending.length };
   }
 
-  const announcementLiveUrl = getAnnouncementLiveUrl();
-  if (!announcementLiveUrl && announcementsNeedLiveUrl()) {
+  const configuredAnnouncementLiveUrl = getAnnouncementLiveUrl();
+  if (!configuredAnnouncementLiveUrl && announcementsNeedLiveUrl()) {
     log('YouTube Live URL is missing; watcher will not start stream without announcement URL', {
       pending: pending.length,
       needed: batchSize,
@@ -421,6 +493,13 @@ async function runOnce() {
     jobIds: batch.map((item) => item.jobId),
   });
   const result = startBatch(batch);
+  const resolvedAnnouncementLiveUrl = await resolveAnnouncementLiveUrlAfterStart();
+  const announcementLiveUrl = resolvedAnnouncementLiveUrl.url;
+  if (!announcementLiveUrl && announcementsNeedLiveUrl()) {
+    log('YouTube Live URL could not be resolved after stream start; announcements skipped', {
+      resolution: resolvedAnnouncementLiveUrl,
+    });
+  }
   let announcement = { skipped: true, reason: 'not-attempted' };
   let xAnnouncement = { skipped: true, reason: 'not-attempted' };
   try {
@@ -445,6 +524,7 @@ async function runOnce() {
   }
   markStreamed(batch.map((item) => item.jobId), 'auto-live-started', {
     youtubeLiveUrl: announcementLiveUrl,
+    youtubeLiveUrlResolution: resolvedAnnouncementLiveUrl,
     announcement,
     xAnnouncement,
   });
