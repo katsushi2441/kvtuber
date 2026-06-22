@@ -117,7 +117,20 @@ export TWITTER_CT0="..."
 twitter status
 ```
 
-If `twitter-cli` is authenticated, the Kurage Shorts watcher also posts the YouTube Live URL to X. If authentication is missing or expired, the watcher logs `twitter-not-authenticated` and continues the YouTube Live plus AIxSNS flow without inventing a fake X result.
+If `twitter-cli` is authenticated, the Kurage Shorts watcher also posts the YouTube Live URL to X. If authentication is missing or expired, the watcher falls back to `browser-use` and operates the already-authenticated Chrome profile at `/home/kojima/work/browser_agent/chrome-profile` without extracting cookies. If both methods fail, it logs the real reason and continues the YouTube Live plus AIxSNS flow without inventing a fake X result.
+
+Browser-use fallback settings:
+
+```bash
+# Default: enabled.
+KURAGE_SHORTS_X_BROWSER_USE=1
+
+# Optional: connect to an already-running authenticated Chrome instead.
+BROWSER_USE_CDP_URL="http://127.0.0.1:9223"
+
+# Optional: show the browser through VNC/DISPLAY.
+BROWSER_USE_X_HEADFUL=1
+```
 
 ## Relationship to Kurage
 

@@ -12,10 +12,12 @@ const WATCHER_PID_PATH = '/tmp/kurage-shorts-live-watcher.pid';
 const WATCHER_LOG_PATH = '/tmp/kurage-shorts-live-watcher.log';
 const SHORTS_SCRIPT = join(ROOT, 'scripts/youtube-live-kurage-shorts.mjs');
 const WATCHER_SCRIPT = join(ROOT, 'scripts/watch-kurage-shorts-live.mjs');
+const X_BROWSER_USE_SCRIPT = join(ROOT, 'scripts/x-post-browser-use.py');
 const DEFAULT_INTERVAL_SECONDS = 60;
 const DEFAULT_BATCH_SIZE = 5;
 const DEFAULT_SCAN_LIMIT = 200;
 const DEFAULT_AIXSNS_API = 'https://aixec.exbridge.jp/api.php?path=posts';
+const DEFAULT_BROWSER_AGENT_PYTHON = '/home/kojima/work/browser_agent/.venv/bin/python';
 
 function readJson(path, fallback) {
   try {
@@ -118,6 +120,14 @@ function commandExists(command) {
   return result.status === 0;
 }
 
+function getBrowserUsePython() {
+  return String(process.env.BROWSER_AGENT_PYTHON || DEFAULT_BROWSER_AGENT_PYTHON);
+}
+
+function browserUseXAvailable() {
+  return existsSync(getBrowserUsePython()) && existsSync(X_BROWSER_USE_SCRIPT);
+}
+
 function buildAnnouncementContent(items, liveUrl) {
   const titles = items
     .map((item, index) => `${index + 1}. ${item.title}`)
@@ -160,6 +170,45 @@ function twitterAuthStatus() {
     };
   }
   return { authenticated: true };
+}
+
+function postXWithBrowserUse(content) {
+  if (String(process.env.KURAGE_SHORTS_X_BROWSER_USE || '1') === '0') {
+    return { skipped: true, reason: 'browser-use-disabled' };
+  }
+  if (!browserUseXAvailable()) {
+    return { skipped: true, reason: 'browser-use-not-available' };
+  }
+
+  const args = [X_BROWSER_USE_SCRIPT, '--text', content];
+  if (String(process.env.BROWSER_USE_X_HEADFUL || '0') === '1') {
+    args.push('--headful');
+  }
+  const result = spawnSync(getBrowserUsePython(), args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024 * 4,
+    timeout: Number(process.env.BROWSER_USE_X_TIMEOUT_MS || 180000),
+    env: { ...process.env },
+  });
+  const output = `${result.stdout || ''}\n${result.stderr || ''}`.trim();
+  let parsed = {};
+  try {
+    const jsonStart = result.stdout.indexOf('{');
+    parsed = jsonStart >= 0 ? JSON.parse(result.stdout.slice(jsonStart)) : {};
+  } catch {
+    parsed = {};
+  }
+  if (result.status !== 0 || parsed.ok === false) {
+    throw new Error(`browser-use X post failed: ${output.slice(0, 1000)}`);
+  }
+  const url = output.match(/https?:\/\/(?:x|twitter)\.com\/[^\s"']+/)?.[0] || '';
+  return {
+    skipped: false,
+    via: 'browser-use',
+    url,
+    output: output.slice(0, 1000),
+  };
 }
 
 async function postAixsnsAnnouncement(items, liveUrl) {
@@ -208,20 +257,24 @@ function postXAnnouncement(items, liveUrl) {
   if (!liveUrl) {
     return { skipped: true, reason: 'missing-youtube-live-url' };
   }
+  const content = buildXAnnouncementContent(items, liveUrl);
   if (!commandExists('twitter')) {
-    return { skipped: true, reason: 'twitter-cli-not-found' };
+    return postXWithBrowserUse(content);
   }
 
   const auth = twitterAuthStatus();
   if (!auth.authenticated) {
+    const fallback = postXWithBrowserUse(content);
     return {
-      skipped: true,
-      reason: auth.reason,
-      detail: auth.detail,
+      ...fallback,
+      twitterCli: {
+        skipped: true,
+        reason: auth.reason,
+        detail: auth.detail,
+      },
     };
   }
 
-  const content = buildXAnnouncementContent(items, liveUrl);
   const result = spawnSync('twitter', ['post', content], {
     cwd: ROOT,
     encoding: 'utf8',
@@ -235,6 +288,7 @@ function postXAnnouncement(items, liveUrl) {
   const url = output.match(/https?:\/\/(?:x|twitter)\.com\/[^\s"']+/)?.[0] || '';
   return {
     skipped: false,
+    via: 'twitter-cli',
     url,
     output: output.slice(0, 500),
   };
@@ -423,6 +477,8 @@ function status() {
           hasTwitterCli: commandExists('twitter'),
           xAuthenticated: xAuth.authenticated,
           xAuthReason: xAuth.authenticated ? '' : xAuth.reason,
+          browserUseFallbackEnabled: String(process.env.KURAGE_SHORTS_X_BROWSER_USE || '1') !== '0',
+          browserUseFallbackAvailable: browserUseXAvailable(),
           hasYoutubeLiveUrl: Boolean(getYoutubeLiveUrl()),
           youtubeLiveUrl: getYoutubeLiveUrl(),
           aixsnsApi: getAixsnsApiUrl(),
