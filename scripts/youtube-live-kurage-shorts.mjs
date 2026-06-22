@@ -133,9 +133,51 @@ function ffprobeVideo(path) {
   }
 }
 
-function loadKurageShorts(limit = 5) {
+function loadKurageShortById(jobsDir, jobId) {
+  const job = readJson(join(jobsDir, `${jobId}.json`), {});
+  const videoFile = String(job.video_file || join(jobsDir, jobId, 'output.mp4'));
+  if (!existsSync(videoFile)) return null;
+
+  const meta = ffprobeVideo(videoFile);
+  if (!meta || !meta.duration) return null;
+  const isShort = meta.duration <= 180.5 && meta.height >= meta.width;
+  if (!isShort) return null;
+
+  return {
+    jobId,
+    title: String(job.title || job.display_title || job.summary_title || jobId),
+    source: job.source || '',
+    contentType: job.content_type || '',
+    videoFile,
+    duration: meta.duration,
+    width: meta.width,
+    height: meta.height,
+    modifiedAt: statSync(videoFile).mtimeMs,
+    url: `https://kurage.exbridge.jp/kuragev.php?id=${jobId}`,
+  };
+}
+
+function loadKurageShorts(limit = 5, options = {}) {
   const jobsDir = resolve(process.env.KURAGE_JOBS_DIR || DEFAULT_KURAGE_JOBS_DIR);
   if (!existsSync(jobsDir)) throw new Error(`Kurage jobs directory not found: ${jobsDir}`);
+
+  const requestedJobIds =
+    options.jobIds ||
+    String(process.env.KURAGE_SHORTS_JOB_IDS || '')
+      .split(',')
+      .map((jobId) => jobId.trim())
+      .filter(Boolean);
+  if (requestedJobIds.length > 0) {
+    const items = requestedJobIds
+      .map((jobId) => loadKurageShortById(jobsDir, jobId))
+      .filter(Boolean);
+    if (items.length !== requestedJobIds.length) {
+      const found = new Set(items.map((item) => item.jobId));
+      const missing = requestedJobIds.filter((jobId) => !found.has(jobId));
+      throw new Error(`指定されたKurageショート動画を読み込めません: ${missing.join(', ')}`);
+    }
+    return items;
+  }
 
   const videoFiles = run('find', [
     jobsDir,
@@ -175,26 +217,9 @@ function loadKurageShorts(limit = 5) {
   for (const candidate of candidates) {
     const videoFile = candidate.videoFile;
     const jobId = dirname(videoFile).replace(/^.*\//, '');
-    const job = readJson(join(jobsDir, `${jobId}.json`), {});
-
-    const meta = ffprobeVideo(videoFile);
-    if (!meta || !meta.duration) continue;
-    const isShort = meta.duration <= 180.5 && meta.height >= meta.width;
-    if (!isShort) continue;
-
-    const modifiedAt = statSync(videoFile).mtimeMs;
-    items.push({
-      jobId,
-      title: String(job.title || job.display_title || job.summary_title || jobId),
-      source: job.source || '',
-      contentType: job.content_type || '',
-      videoFile,
-      duration: meta.duration,
-      width: meta.width,
-      height: meta.height,
-      modifiedAt: candidate.modifiedAt,
-      url: `https://kurage.exbridge.jp/kuragev.php?id=${jobId}`,
-    });
+    const item = loadKurageShortById(jobsDir, jobId);
+    if (!item) continue;
+    items.push({ ...item, modifiedAt: candidate.modifiedAt });
     if (items.length >= limit) break;
   }
 
