@@ -109,6 +109,27 @@ function getYoutubeLiveUrl() {
   ).trim();
 }
 
+function getYoutubeChannelLiveUrl() {
+  const config = readJson(YOUTUBE_CONFIG_PATH, {});
+  return String(
+    process.env.YOUTUBE_CHANNEL_LIVE_URL ||
+      process.env.KURAGE_YOUTUBE_CHANNEL_LIVE_URL ||
+      config.youtubeChannelLiveUrl ||
+      config.channelLiveUrl ||
+      '',
+  ).trim();
+}
+
+function getAnnouncementLiveUrl() {
+  return getYoutubeLiveUrl() || getYoutubeChannelLiveUrl();
+}
+
+function announcementsNeedLiveUrl() {
+  const aixsnsEnabled = String(process.env.KURAGE_SHORTS_ANNOUNCE_AIXSNS || '1') !== '0';
+  const xEnabled = String(process.env.KURAGE_SHORTS_ANNOUNCE_X || '1') !== '0';
+  return (aixsnsEnabled || xEnabled) && String(process.env.KURAGE_SHORTS_REQUIRE_LIVE_URL || '1') !== '0';
+}
+
 function getAixsnsApiUrl() {
   return String(process.env.AIXSNS_API || DEFAULT_AIXSNS_API).trim();
 }
@@ -385,6 +406,16 @@ async function runOnce() {
     return { started: false, reason: 'not-enough-pending', pending: pending.length };
   }
 
+  const announcementLiveUrl = getAnnouncementLiveUrl();
+  if (!announcementLiveUrl && announcementsNeedLiveUrl()) {
+    log('YouTube Live URL is missing; watcher will not start stream without announcement URL', {
+      pending: pending.length,
+      needed: batchSize,
+      hint: 'Set YOUTUBE_LIVE_URL or youtubeLiveUrl, or set YOUTUBE_CHANNEL_LIVE_URL/youtubeChannelLiveUrl for the channel live page.',
+    });
+    return { started: false, reason: 'missing-youtube-live-url', pending: pending.length };
+  }
+
   const batch = pending.slice(0, batchSize);
   log('starting YouTube Live for new Kurage shorts batch', {
     jobIds: batch.map((item) => item.jobId),
@@ -393,7 +424,7 @@ async function runOnce() {
   let announcement = { skipped: true, reason: 'not-attempted' };
   let xAnnouncement = { skipped: true, reason: 'not-attempted' };
   try {
-    announcement = await postAixsnsAnnouncement(batch, getYoutubeLiveUrl());
+    announcement = await postAixsnsAnnouncement(batch, announcementLiveUrl);
     log('AIxSNS announcement handled', announcement);
   } catch (error) {
     announcement = {
@@ -403,7 +434,7 @@ async function runOnce() {
     log('AIxSNS announcement failed', announcement);
   }
   try {
-    xAnnouncement = postXAnnouncement(batch, getYoutubeLiveUrl());
+    xAnnouncement = postXAnnouncement(batch, announcementLiveUrl);
     log('X announcement handled', xAnnouncement);
   } catch (error) {
     xAnnouncement = {
@@ -413,7 +444,7 @@ async function runOnce() {
     log('X announcement failed', xAnnouncement);
   }
   markStreamed(batch.map((item) => item.jobId), 'auto-live-started', {
-    youtubeLiveUrl: getYoutubeLiveUrl(),
+    youtubeLiveUrl: announcementLiveUrl,
     announcement,
     xAnnouncement,
   });
@@ -471,8 +502,11 @@ function status() {
           xAuthReason: xAuth.authenticated ? '' : xAuth.reason,
           browserUseFallbackEnabled: String(process.env.KURAGE_SHORTS_X_BROWSER_USE || '1') !== '0',
           browserUseFallbackAvailable: browserUseXAvailable(),
-          hasYoutubeLiveUrl: Boolean(getYoutubeLiveUrl()),
+          hasYoutubeLiveUrl: Boolean(getAnnouncementLiveUrl()),
           youtubeLiveUrl: getYoutubeLiveUrl(),
+          youtubeChannelLiveUrl: getYoutubeChannelLiveUrl(),
+          announcementLiveUrl: getAnnouncementLiveUrl(),
+          requireLiveUrl: announcementsNeedLiveUrl(),
           aixsnsApi: getAixsnsApiUrl(),
         },
         streamedCount: state.streamedJobIds.length,
