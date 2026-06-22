@@ -23,6 +23,10 @@ const DEFAULT_SCAN_LIMIT = 200;
 const DEFAULT_AIXSNS_API = 'https://aixec.exbridge.jp/api.php?path=posts';
 const DEFAULT_BROWSER_AGENT_PYTHON = '/home/kojima/work/browser_agent/.venv/bin/python';
 
+function liveAutomationEnabled() {
+  return String(process.env.KURAGE_SHORTS_LIVE_ENABLED || '0') === '1';
+}
+
 function readJson(path, fallback) {
   try {
     return JSON.parse(readFileSync(path, 'utf8'));
@@ -812,6 +816,13 @@ function pendingShorts() {
 }
 
 async function runOnce() {
+  if (!liveAutomationEnabled()) {
+    log('Kurage shorts live automation is disabled; watcher will not start or reserve streams', {
+      hint: 'Set KURAGE_SHORTS_LIVE_ENABLED=1 only when YouTube Studio is supervised and ready.',
+    });
+    return { started: false, reason: 'live-automation-disabled' };
+  }
+
   const batchSize = getMinBatchSize();
   const reservationBatchSize = getReservationBatchSize();
   const now = new Date();
@@ -1053,6 +1064,7 @@ function status() {
           running: isPidAlive(pid),
           logPath: WATCHER_LOG_PATH,
           statePath: WATCHER_STATE_PATH,
+          liveAutomationEnabled: liveAutomationEnabled(),
         },
         live: {
           running: Boolean(live.running),
@@ -1114,6 +1126,9 @@ function status() {
 }
 
 function startDetached() {
+  if (!liveAutomationEnabled()) {
+    throw new Error('Kurage shorts live automation is disabled. Set KURAGE_SHORTS_LIVE_ENABLED=1 only for supervised manual operation.');
+  }
   if (!process.env.YOUTUBE_STREAM_KEY) {
     throw new Error('YOUTUBE_STREAM_KEY を環境変数で指定してください');
   }

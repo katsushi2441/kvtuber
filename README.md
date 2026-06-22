@@ -99,19 +99,20 @@ Do not commit:
 
 The RTMP helper is configured through `storage/youtube-live.json` or the admin API. Keep `streamKey` empty in committed files. The runtime launches a dedicated Chrome profile and captures the fixed broadcast viewer into ffmpeg.
 
-Kurage Shorts live automation can watch generated Kurage short videos and start a YouTube Live playlist whenever five new shorts are available:
+Kurage Shorts live automation is disabled by default. YouTube Live still requires a supervised YouTube Studio page, so do not run unattended automatic live streams in production. Start the watcher only for supervised manual operation:
 
 ```bash
+KURAGE_SHORTS_LIVE_ENABLED=1 \
 YOUTUBE_STREAM_KEY="..." \
 YOUTUBE_LIVE_URL="https://www.youtube.com/..." \
 npm run youtube-live:shorts-watch -- start
 ```
 
-Set either `YOUTUBE_LIVE_URL` for the exact broadcast URL or `YOUTUBE_CHANNEL_LIVE_URL` for the channel live page. When only the channel live page is configured, the watcher starts the RTMP stream and then uses `yt-dlp` to resolve the active `watch?v=...` URL before posting AIxSNS announcements. If the active watch URL cannot be confirmed, the watcher stops the stream and keeps the batch pending instead of marking it as successfully streamed. The watcher also refuses to start when the effective runtime config has no YouTube stream key. Set `KURAGE_SHORTS_REQUIRE_LIVE_URL=0` only for local tests where announcements do not matter.
+Set either `YOUTUBE_LIVE_URL` for the exact broadcast URL or `YOUTUBE_CHANNEL_LIVE_URL` for the channel live page. When only the channel live page is configured, the watcher starts the RTMP stream and then uses `yt-dlp` to resolve the active `watch?v=...` URL before posting AIxSNS announcements. If the active watch URL cannot be confirmed, the watcher stops the stream and keeps the batch pending instead of marking it as successfully streamed. The watcher also refuses to start unless `KURAGE_SHORTS_LIVE_ENABLED=1` and the effective runtime config has a YouTube stream key. Set `KURAGE_SHORTS_REQUIRE_LIVE_URL=0` only for local tests where announcements do not matter.
 
 When an announcement URL is available, the watcher posts a live announcement to AIxSNS after the RTMP stream starts. AgentReach is intentionally not used for X posting because its supported scope is internet/platform retrieval, not write actions such as posting, replying, or liking.
 
-Production throttling is enabled by default so worker bursts do not create back-to-back live streams. The watcher turns pending videos into explicit reservations in `storage/kurage-shorts-live-watcher.json`, then starts each reserved batch only when its `scheduledFor` time arrives. Failed confirmations stay pending instead of being marked as streamed:
+When live automation is explicitly enabled for supervised operation, production throttling prevents worker bursts from creating back-to-back live streams. The watcher turns pending videos into explicit reservations in `storage/kurage-shorts-live-watcher.json`, then starts each reserved batch only when its `scheduledFor` time arrives. Failed confirmations stay pending instead of being marked as streamed:
 
 ```bash
 # Defaults: wait for at least 5 new shorts, reserve 5 at a time,
