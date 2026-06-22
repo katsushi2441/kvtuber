@@ -22,6 +22,9 @@ const DEFAULT_INTERVAL_SECONDS = 300;
 const DEFAULT_COOLDOWN_HOURS = 8;
 const DEFAULT_MAX_UPLOADS_PER_DAY = 3;
 const DEFAULT_POLICY_TIME_ZONE = 'Asia/Tokyo';
+const DEFAULT_AIXSNS_API = 'https://aixec.exbridge.jp/api.php?path=posts';
+const DEFAULT_BROWSER_AGENT_PYTHON = '/home/kojima/work/browser_agent/.venv/bin/python';
+const X_BROWSER_USE_SCRIPT = join(ROOT, 'scripts/x-post-browser-use.py');
 const MAX_SCAN_JOBS = 2000;
 
 function readJson(path, fallback) {
@@ -62,6 +65,13 @@ function run(command, args, options = {}) {
     maxBuffer: 1024 * 1024 * 32,
     ...options,
   });
+}
+
+function commandExists(command) {
+  const result = spawnSync('bash', ['-lc', `command -v ${JSON.stringify(command)}`], {
+    encoding: 'utf8',
+  });
+  return result.status === 0;
 }
 
 function isPidAlive(pid) {
@@ -245,6 +255,208 @@ function buildDescription(item) {
   return `${summary}${source}Kurage動画:\n${item.kurageUrl}\n\n株式会社エクスブリッジ:\nhttps://exbridge.jp/\n\n#Shorts #Kurage #AI動画生成`;
 }
 
+function truncateText(text, limit) {
+  const value = String(text || '').replace(/\s+/g, ' ').trim();
+  if (value.length <= limit) return value;
+  return `${value.slice(0, Math.max(0, limit - 1)).trim()}…`;
+}
+
+function buildAnnouncementContent(item, upload) {
+  const title = truncateText(item.title, 82);
+  return [
+    'Kurageショート動画をYouTube Shortsに投稿しました。',
+    '',
+    title,
+    '',
+    `Kurage動画: ${item.kurageUrl}`,
+    `YouTube Shorts: ${upload.youtubeUrl}`,
+    '',
+    '#Kurage #AI動画生成 #Shorts #エクスブリッジ',
+  ].join('\n');
+}
+
+function getAixsnsApiUrl() {
+  return stringEnv('AIXSNS_API', DEFAULT_AIXSNS_API);
+}
+
+async function postAixsnsAnnouncement(item, upload, content = buildAnnouncementContent(item, upload)) {
+  if (stringEnv('KURAGE_SHORTS_UPLOAD_ANNOUNCE_AIXSNS', '1') === '0') {
+    return { skipped: true, reason: 'disabled' };
+  }
+  const response = await fetch(getAixsnsApiUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      author: 'kurage',
+      content,
+      title: 'Kurageショート動画 YouTube Shorts投稿',
+      description: `Kurage動画をYouTube Shortsへ自動投稿しました: ${item.title}`,
+      kind: 'youtube_shorts_upload_announcement',
+      source_url: item.kurageUrl,
+      related_url: upload.youtubeUrl,
+    }),
+  });
+  const body = await response.text();
+  let parsed = {};
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    parsed = { raw: body.slice(0, 500) };
+  }
+  if (!response.ok || parsed.ok === false) {
+    throw new Error(`AIxSNS announcement failed (${response.status}): ${JSON.stringify(parsed).slice(0, 500)}`);
+  }
+  const posted = parsed.item && typeof parsed.item === 'object' ? parsed.item : {};
+  return {
+    skipped: false,
+    id: posted.id || null,
+    url: posted.id ? `https://aixec.exbridge.jp/sns.php?id=${posted.id}` : '',
+  };
+}
+
+function getBrowserUsePython() {
+  return stringEnv('BROWSER_AGENT_PYTHON', DEFAULT_BROWSER_AGENT_PYTHON);
+}
+
+function browserUseXAvailable() {
+  return existsSync(getBrowserUsePython()) && existsSync(X_BROWSER_USE_SCRIPT);
+}
+
+function twitterAuthStatus() {
+  if (!commandExists('twitter')) {
+    return { authenticated: false, reason: 'twitter-cli-not-found' };
+  }
+  const auth = spawnSync('twitter', ['status'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+    env: { ...process.env },
+  });
+  const output = `${auth.stdout || ''}\n${auth.stderr || ''}`;
+  if (auth.status !== 0 || /not_authenticated/i.test(output)) {
+    return {
+      authenticated: false,
+      reason: 'twitter-not-authenticated',
+      detail: output.slice(0, 500),
+    };
+  }
+  return { authenticated: true };
+}
+
+function postXWithBrowserUse(content) {
+  if (stringEnv('KURAGE_SHORTS_UPLOAD_X_BROWSER_USE', '1') === '0') {
+    return { skipped: true, reason: 'browser-use-disabled' };
+  }
+  if (!browserUseXAvailable()) {
+    return { skipped: true, reason: 'browser-use-not-available' };
+  }
+  const args = [X_BROWSER_USE_SCRIPT, '--text', content];
+  if (stringEnv('BROWSER_USE_X_HEADFUL', '0') === '1') {
+    args.push('--headful');
+  }
+  const timeoutMs = numberEnv('BROWSER_USE_X_TIMEOUT_MS', 60000);
+  const timeoutSeconds = Math.max(5, Math.ceil(timeoutMs / 1000));
+  const command = commandExists('timeout') ? 'timeout' : getBrowserUsePython();
+  const commandArgs = command === 'timeout'
+    ? ['--kill-after=10s', `${timeoutSeconds}s`, getBrowserUsePython(), ...args]
+    : args;
+  const result = spawnSync(command, commandArgs, {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024 * 4,
+    timeout: timeoutMs + 15000,
+    env: { ...process.env },
+  });
+  const output = `${result.stdout || ''}\n${result.stderr || ''}`.trim();
+  let parsed = {};
+  try {
+    const jsonStart = result.stdout.indexOf('{');
+    parsed = jsonStart >= 0 ? JSON.parse(result.stdout.slice(jsonStart)) : {};
+  } catch {
+    parsed = {};
+  }
+  if (result.status !== 0 || parsed.ok === false) {
+    throw new Error(`browser-use X post failed: ${output.slice(0, 1000)}`);
+  }
+  const url = output.match(/https?:\/\/(?:x|twitter)\.com\/[^\s"']+/)?.[0] || '';
+  return {
+    skipped: false,
+    via: 'browser-use',
+    url,
+    output: output.slice(0, 1000),
+  };
+}
+
+function postXAnnouncement(item, upload, content = buildAnnouncementContent(item, upload)) {
+  if (stringEnv('KURAGE_SHORTS_UPLOAD_ANNOUNCE_X', '0') === '0') {
+    return { skipped: true, reason: 'disabled' };
+  }
+  if (!commandExists('twitter')) {
+    return postXWithBrowserUse(content);
+  }
+  const auth = twitterAuthStatus();
+  if (!auth.authenticated) {
+    const fallback = postXWithBrowserUse(content);
+    return {
+      ...fallback,
+      twitterCli: {
+        skipped: true,
+        reason: auth.reason,
+        detail: auth.detail,
+      },
+    };
+  }
+  const result = spawnSync('twitter', ['post', content], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+    env: { ...process.env },
+  });
+  if (result.status !== 0) {
+    throw new Error(`X announcement failed: ${(result.stderr || result.stdout || '').slice(0, 500)}`);
+  }
+  const output = `${result.stdout || ''}\n${result.stderr || ''}`.trim();
+  const url = output.match(/https?:\/\/(?:x|twitter)\.com\/[^\s"']+/)?.[0] || '';
+  return {
+    skipped: false,
+    via: 'twitter-cli',
+    url,
+    output: output.slice(0, 500),
+  };
+}
+
+async function announceUpload(item, upload) {
+  const content = buildAnnouncementContent(item, upload);
+  const result = {
+    content,
+    aixsns: { skipped: true, reason: 'not-attempted' },
+    x: { skipped: true, reason: 'not-attempted' },
+  };
+  try {
+    result.aixsns = await postAixsnsAnnouncement(item, upload, content);
+    log('AIxSNS Shorts upload announcement handled', result.aixsns);
+  } catch (error) {
+    result.aixsns = {
+      skipped: false,
+      ok: false,
+      error: String(error instanceof Error ? error.message : error).slice(0, 1000),
+    };
+    log('AIxSNS Shorts upload announcement failed', result.aixsns);
+  }
+  try {
+    result.x = postXAnnouncement(item, upload, content);
+    log('X Shorts upload announcement handled', result.x);
+  } catch (error) {
+    result.x = {
+      skipped: false,
+      ok: false,
+      error: String(error instanceof Error ? error.message : error).slice(0, 1000),
+    };
+    log('X Shorts upload announcement failed', result.x);
+  }
+  return result;
+}
+
 function uploadToYoutube(item) {
   const uploadTool = stringEnv('YOUTUBE_UPLOAD_TOOL', DEFAULT_UPLOAD_TOOL);
   const uploadCwd = stringEnv('YOUTUBE_UPLOAD_CWD', DEFAULT_UPLOAD_CWD);
@@ -305,7 +517,7 @@ function markJobUploaded(item, upload) {
   saveJson(item.jobFile, next);
 }
 
-function recordUpload(state, item, upload) {
+function recordUpload(state, item, upload, announcement = undefined) {
   const next = {
     ...state,
     uploads: [
@@ -318,12 +530,40 @@ function recordUpload(state, item, upload) {
         youtubeVideoId: upload.youtubeVideoId,
         uploadedAt: new Date().toISOString(),
         kurageUrl: item.kurageUrl,
+        announcement,
       },
     ],
     updatedAt: new Date().toISOString(),
   };
   saveJson(STATE_PATH, next);
   return next;
+}
+
+function loadItemByJobId(jobId) {
+  const jobsDir = resolve(stringEnv('KURAGE_JOBS_DIR', DEFAULT_KURAGE_JOBS_DIR));
+  const jobFile = join(jobsDir, `${jobId}.json`);
+  const job = readJson(jobFile, null);
+  if (!job) return null;
+  const videoFile = jobVideoPath(jobsDir, jobId, job);
+  const meta = existsSync(videoFile) ? ffprobeVideo(videoFile) : null;
+  return {
+    jobId,
+    title: String(job.title || job.display_title || job.summary_title || jobId).trim(),
+    descriptionText: String(job.display_summary || job.summary || job.tweet_text || '').trim(),
+    articleUrl: String(job.article_url || job.related_article_url || job.tweet_url || job.source_url || '').trim(),
+    source: job.source || '',
+    contentType: job.content_type || '',
+    views: Number(job.views || 0),
+    createdAt: job.created_at || '',
+    updatedAt: job.updated_at || '',
+    videoFile,
+    jobFile,
+    duration: meta?.duration || 0,
+    width: meta?.width || 0,
+    height: meta?.height || 0,
+    modifiedAt: existsSync(videoFile) ? statSync(videoFile).mtimeMs : 0,
+    kurageUrl: `https://kurage.exbridge.jp/kuragev.php?id=${jobId}`,
+  };
 }
 
 function recordFailure(state, item, error) {
@@ -382,13 +622,14 @@ async function runOnce(options = {}) {
   try {
     const upload = uploadToYoutube(item);
     markJobUploaded(item, upload);
-    state = recordUpload(state, item, upload);
+    const announcement = await announceUpload(item, upload);
+    state = recordUpload(state, item, upload, announcement);
     log('Uploaded Kurage short to YouTube', {
       jobId: item.jobId,
       views: item.views,
       youtubeUrl: upload.youtubeUrl,
     });
-    return { ok: true, uploaded: true, item, youtubeUrl: upload.youtubeUrl, state };
+    return { ok: true, uploaded: true, item, youtubeUrl: upload.youtubeUrl, announcement, state };
   } catch (error) {
     recordFailure(state, item, error);
     log('YouTube Shorts upload failed', {
@@ -430,6 +671,15 @@ function status() {
         policy: policyStatus(state),
         uploadedCount: state.uploads.length,
         failureCount: state.failures.length,
+        announcement: {
+          aixsnsEnabled: stringEnv('KURAGE_SHORTS_UPLOAD_ANNOUNCE_AIXSNS', '1') !== '0',
+          xEnabled: stringEnv('KURAGE_SHORTS_UPLOAD_ANNOUNCE_X', '0') !== '0',
+          hasTwitterCli: commandExists('twitter'),
+          twitterAuth: twitterAuthStatus(),
+          browserUseFallbackEnabled: stringEnv('KURAGE_SHORTS_UPLOAD_X_BROWSER_USE', '1') !== '0',
+          browserUseFallbackAvailable: browserUseXAvailable(),
+          aixsnsApi: getAixsnsApiUrl(),
+        },
         nextCandidate: candidates[0] || null,
         candidates,
         statePath: STATE_PATH,
@@ -439,6 +689,30 @@ function status() {
       2,
     ),
   );
+}
+
+async function announceLast() {
+  const state = readState();
+  const uploadRecord = [...state.uploads].reverse().find((item) => item?.jobId && item?.youtubeUrl);
+  if (!uploadRecord) throw new Error('No uploaded Shorts record found');
+  const item = loadItemByJobId(uploadRecord.jobId);
+  if (!item) throw new Error(`Uploaded job was not found: ${uploadRecord.jobId}`);
+  const upload = {
+    youtubeUrl: uploadRecord.youtubeUrl,
+    youtubeVideoId: uploadRecord.youtubeVideoId || '',
+  };
+  const announcement = await announceUpload(item, upload);
+  const next = {
+    ...state,
+    uploads: state.uploads.map((entry) =>
+      entry === uploadRecord || entry.jobId === uploadRecord.jobId
+        ? { ...entry, announcement, announcementUpdatedAt: new Date().toISOString() }
+        : entry,
+    ),
+    updatedAt: new Date().toISOString(),
+  };
+  saveJson(STATE_PATH, next);
+  return { ok: true, jobId: item.jobId, youtubeUrl: upload.youtubeUrl, announcement };
 }
 
 function startDaemon() {
@@ -471,6 +745,9 @@ try {
     console.log(JSON.stringify({ ok: true, items: loadCandidates(limit) }, null, 2));
   } else if (command === 'run-once') {
     const result = await runOnce({ force: process.argv.includes('--force') });
+    console.log(JSON.stringify(result, null, 2));
+  } else if (command === 'announce-last') {
+    const result = await announceLast();
     console.log(JSON.stringify(result, null, 2));
   } else if (command === 'watch') {
     await watchLoop();

@@ -15,6 +15,9 @@ Environment=KURAGE_SHORTS_UPLOAD_MAX_PER_DAY=3
 Environment=KURAGE_SHORTS_UPLOAD_TIME_ZONE=Asia/Tokyo
 Environment=KURAGE_SHORTS_UPLOAD_INTERVAL_SECONDS=300
 Environment=KURAGE_SHORTS_UPLOAD_PRIVACY=public
+Environment=KURAGE_SHORTS_UPLOAD_ANNOUNCE_AIXSNS=1
+Environment=KURAGE_SHORTS_UPLOAD_ANNOUNCE_X=1
+Environment=KURAGE_SHORTS_UPLOAD_X_BROWSER_USE=1
 ExecStart=/home/kojima/.nvm/versions/node/v20.20.2/bin/node /home/kojima/work/kvtuber/scripts/watch-kurage-shorts-upload.mjs watch
 Restart=always
 RestartSec=60

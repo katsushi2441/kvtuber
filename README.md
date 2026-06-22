@@ -167,6 +167,7 @@ The watcher selects existing Kurage videos in this order:
 - sort remaining videos by `views` descending, then by newest video file
 - upload one video at a time as public YouTube Shorts
 - after success, write `youtube_url`, `youtube_video_id`, and upload timestamps back to the Kurage job JSON
+- after success, announce the upload to AIxSNS and, when enabled, X using the same concise text
 
 Production cadence:
 
@@ -174,7 +175,11 @@ Production cadence:
 KURAGE_SHORTS_UPLOAD_COOLDOWN_HOURS=8
 KURAGE_SHORTS_UPLOAD_MAX_PER_DAY=3
 KURAGE_SHORTS_UPLOAD_TIME_ZONE="Asia/Tokyo"
+KURAGE_SHORTS_UPLOAD_ANNOUNCE_AIXSNS=1
+KURAGE_SHORTS_UPLOAD_ANNOUNCE_X=1
 ```
+
+AIxSNS announcements must use `author: "kurage"` and keep the Kurage public URL (`https://kurage.exbridge.jp/kuragev.php?id=...`) in both `content` and `source_url`. X announcements use the same text. If `twitter-cli` is not authenticated, the watcher falls back to `browser-use` with the authenticated Chrome profile; X failures are logged but do not roll back or block the successful YouTube upload.
 
 Run once:
 
