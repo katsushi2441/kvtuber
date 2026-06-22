@@ -99,6 +99,16 @@ Do not commit:
 
 The RTMP helper is configured through `storage/youtube-live.json` or the admin API. Keep `streamKey` empty in committed files. The runtime launches a dedicated Chrome profile and captures the fixed broadcast viewer into ffmpeg.
 
+Kurage Shorts live automation can watch generated Kurage short videos and start a YouTube Live playlist whenever five new shorts are available:
+
+```bash
+YOUTUBE_STREAM_KEY="..." \
+YOUTUBE_LIVE_URL="https://www.youtube.com/..." \
+npm run youtube-live:shorts-watch -- start
+```
+
+When `YOUTUBE_LIVE_URL` is set, the watcher posts a live announcement to AIxSNS after the RTMP stream starts. AgentReach is intentionally not used for X posting because its supported scope is internet/platform retrieval, not write actions such as posting, replying, or liking.
+
 ## Relationship to Kurage
 
 `kvtuber` is the reusable AI avatar runtime. Application repositories can provide brand-specific avatars, scripts, content packs, and deployment settings.

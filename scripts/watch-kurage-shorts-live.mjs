@@ -6,6 +6,7 @@ import process from 'node:process';
 
 const ROOT = dirname(new URL(import.meta.url).pathname).replace(/\/scripts$/, '');
 const WATCHER_STATE_PATH = join(ROOT, 'storage/kurage-shorts-live-watcher.json');
+const YOUTUBE_CONFIG_PATH = join(ROOT, 'storage/youtube-live.json');
 const LIVE_STATE_PATH = '/tmp/kurage-youtube-live-shorts-state.json';
 const WATCHER_PID_PATH = '/tmp/kurage-shorts-live-watcher.pid';
 const WATCHER_LOG_PATH = '/tmp/kurage-shorts-live-watcher.log';
@@ -14,6 +15,7 @@ const WATCHER_SCRIPT = join(ROOT, 'scripts/watch-kurage-shorts-live.mjs');
 const DEFAULT_INTERVAL_SECONDS = 60;
 const DEFAULT_BATCH_SIZE = 5;
 const DEFAULT_SCAN_LIMIT = 200;
+const DEFAULT_AIXSNS_API = 'https://aixec.exbridge.jp/api.php?path=posts';
 
 function readJson(path, fallback) {
   try {
@@ -94,6 +96,76 @@ function startBatch(items) {
   return parseJsonOutput(result.stdout);
 }
 
+function getYoutubeLiveUrl() {
+  const config = readJson(YOUTUBE_CONFIG_PATH, {});
+  return String(
+    process.env.YOUTUBE_LIVE_URL ||
+      process.env.KURAGE_YOUTUBE_LIVE_URL ||
+      config.youtubeLiveUrl ||
+      config.liveUrl ||
+      '',
+  ).trim();
+}
+
+function getAixsnsApiUrl() {
+  return String(process.env.AIXSNS_API || DEFAULT_AIXSNS_API).trim();
+}
+
+function buildAnnouncementContent(items, liveUrl) {
+  const titles = items
+    .map((item, index) => `${index + 1}. ${item.title}`)
+    .join('\n');
+  return [
+    'Kurageショート動画のYouTube Live配信を開始しました。',
+    '',
+    '新しく追加されたショート動画5本を連続で配信中です。',
+    liveUrl,
+    '',
+    titles,
+    '',
+    '#Kurage #AI動画生成 #YouTubeLive #エクスブリッジ',
+  ].join('\n');
+}
+
+async function postAixsnsAnnouncement(items, liveUrl) {
+  if (String(process.env.KURAGE_SHORTS_ANNOUNCE_AIXSNS || '1') === '0') {
+    return { skipped: true, reason: 'disabled' };
+  }
+  if (!liveUrl) {
+    return { skipped: true, reason: 'missing-youtube-live-url' };
+  }
+
+  const content = buildAnnouncementContent(items, liveUrl);
+  const response = await fetch(getAixsnsApiUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      author: 'kurage',
+      content,
+      title: 'Kurageショート動画 YouTube Live配信開始',
+      description: '新しく追加されたKurageショート動画5本の連続ライブ配信告知',
+      kind: 'youtube_live_announcement',
+      source_url: liveUrl,
+    }),
+  });
+  const body = await response.text();
+  let parsed = {};
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    parsed = { raw: body.slice(0, 500) };
+  }
+  if (!response.ok || parsed.ok === false) {
+    throw new Error(`AIxSNS announcement failed (${response.status}): ${JSON.stringify(parsed).slice(0, 500)}`);
+  }
+  const item = parsed.item && typeof parsed.item === 'object' ? parsed.item : {};
+  return {
+    skipped: false,
+    id: item.id || null,
+    url: item.id ? `https://aixec.exbridge.jp/sns.php?id=${item.id}` : '',
+  };
+}
+
 function currentStreamingJobIds() {
   const live = readJson(LIVE_STATE_PATH, null);
   return Array.isArray(live?.items)
@@ -127,7 +199,7 @@ function saveState(state) {
   });
 }
 
-function markStreamed(jobIds, reason) {
+function markStreamed(jobIds, reason, extra = {}) {
   const state = loadState();
   const streamed = new Set(state.streamedJobIds);
   for (const jobId of jobIds) streamed.add(jobId);
@@ -137,6 +209,7 @@ function markStreamed(jobIds, reason) {
     {
       reason,
       jobIds,
+      ...extra,
       recordedAt: new Date().toISOString(),
     },
   ].slice(-50);
@@ -178,7 +251,7 @@ function pendingShorts() {
   return { state, all, pending };
 }
 
-function runOnce() {
+async function runOnce() {
   const batchSize = Number(process.env.KURAGE_SHORTS_BATCH_SIZE || DEFAULT_BATCH_SIZE);
   const live = liveStatus();
   if (live.running) {
@@ -197,9 +270,23 @@ function runOnce() {
     jobIds: batch.map((item) => item.jobId),
   });
   const result = startBatch(batch);
-  markStreamed(batch.map((item) => item.jobId), 'auto-live-started');
-  log('started YouTube Live batch', { ffmpegPid: result.status?.ffmpegPid });
-  return { started: true, result };
+  let announcement = { skipped: true, reason: 'not-attempted' };
+  try {
+    announcement = await postAixsnsAnnouncement(batch, getYoutubeLiveUrl());
+    log('AIxSNS announcement handled', announcement);
+  } catch (error) {
+    announcement = {
+      skipped: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+    log('AIxSNS announcement failed', announcement);
+  }
+  markStreamed(batch.map((item) => item.jobId), 'auto-live-started', {
+    youtubeLiveUrl: getYoutubeLiveUrl(),
+    announcement,
+  });
+  log('started YouTube Live batch', { ffmpegPid: result.status?.ffmpegPid, announcement });
+  return { started: true, result, announcement };
 }
 
 async function daemon() {
@@ -215,7 +302,7 @@ async function daemon() {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
-      runOnce();
+      await runOnce();
     } catch (error) {
       log('watcher error', { error: error instanceof Error ? error.message : String(error) });
     }
@@ -242,6 +329,12 @@ function status() {
           ffmpegPid: live.ffmpegPid,
           startedAt: live.startedAt,
           mergedVideo: live.mergedVideo,
+        },
+        announcement: {
+          aixsnsEnabled: String(process.env.KURAGE_SHORTS_ANNOUNCE_AIXSNS || '1') !== '0',
+          hasYoutubeLiveUrl: Boolean(getYoutubeLiveUrl()),
+          youtubeLiveUrl: getYoutubeLiveUrl(),
+          aixsnsApi: getAixsnsApiUrl(),
         },
         streamedCount: state.streamedJobIds.length,
         pendingCount: pending.length,
@@ -285,7 +378,7 @@ function stopDetached() {
 const command = process.argv[2] || 'status';
 try {
   if (command === 'daemon') await daemon();
-  else if (command === 'once') console.log(JSON.stringify(runOnce(), null, 2));
+  else if (command === 'once') console.log(JSON.stringify(await runOnce(), null, 2));
   else if (command === 'start') startDetached();
   else if (command === 'stop') stopDetached();
   else if (command === 'status') status();
