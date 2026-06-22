@@ -15,6 +15,7 @@ const ROOT = dirname(new URL(import.meta.url).pathname).replace(/\/scripts$/, ''
 const CONFIG_PATH = join(ROOT, 'storage/youtube-live.json');
 const STATE_PATH = '/tmp/kurage-youtube-live-shorts-state.json';
 const PLAYLIST_PATH = '/tmp/kurage-youtube-live-shorts-playlist.txt';
+const MERGED_VIDEO_PATH = '/tmp/kurage-youtube-live-shorts-merged.mp4';
 const FFMPEG_BIN = existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
 const FFPROBE_BIN = existsSync('/usr/bin/ffprobe') ? '/usr/bin/ffprobe' : 'ffprobe';
 const DEFAULT_KURAGE_JOBS_DIR = '/home/kojima/work/kurage/storage/jobs';
@@ -205,6 +206,70 @@ function writePlaylist(items) {
   writeFileSync(PLAYLIST_PATH, `${lines.join('\n')}\n`, 'utf8');
 }
 
+function buildMergedVideo(items, config) {
+  const inputs = items.flatMap((item) => ['-i', item.videoFile]);
+  const filters = [];
+  const concatInputs = [];
+  for (let index = 0; index < items.length; index += 1) {
+    filters.push(
+      `[${index}:v]scale=${config.width}:${config.height}:force_original_aspect_ratio=decrease,` +
+        `pad=${config.width}:${config.height}:(ow-iw)/2:(oh-ih)/2,` +
+        `setsar=1,fps=${config.fps},format=yuv420p[v${index}]`,
+    );
+    filters.push(
+      `[${index}:a]aresample=44100,aformat=sample_fmts=fltp:channel_layouts=stereo[a${index}]`,
+    );
+    concatInputs.push(`[v${index}][a${index}]`);
+  }
+  filters.push(`${concatInputs.join('')}concat=n=${items.length}:v=1:a=1[v][a]`);
+
+  const result = run(
+    FFMPEG_BIN,
+    [
+      '-hide_banner',
+      '-y',
+      ...inputs,
+      '-filter_complex',
+      filters.join(';'),
+      '-map',
+      '[v]',
+      '-map',
+      '[a]',
+      '-c:v',
+      'libx264',
+      '-preset',
+      'veryfast',
+      '-b:v',
+      config.videoBitrate,
+      '-maxrate',
+      config.videoBitrate,
+      '-bufsize',
+      '5000k',
+      '-pix_fmt',
+      'yuv420p',
+      '-g',
+      String(config.fps * 2),
+      '-c:a',
+      'aac',
+      '-b:a',
+      config.audioBitrate,
+      '-ar',
+      '44100',
+      '-movflags',
+      '+faststart',
+      MERGED_VIDEO_PATH,
+    ],
+    {
+      maxBuffer: 1024 * 1024 * 16,
+    },
+  );
+  if (result.status !== 0) {
+    writeFileSync('/tmp/kurage-youtube-shorts-merge.err.log', result.stderr || '', 'utf8');
+    throw new Error('最新ショート動画の結合に失敗しました。/tmp/kurage-youtube-shorts-merge.err.log を確認してください');
+  }
+  return MERGED_VIDEO_PATH;
+}
+
 function printList() {
   const limit = Number(process.env.KURAGE_SHORTS_LIMIT || process.argv[3] || 5);
   const items = loadKurageShorts(limit);
@@ -230,13 +295,7 @@ async function start() {
   const items = loadKurageShorts(limit);
   if (items.length === 0) throw new Error('配信できるKurageショート動画が見つかりません');
   writePlaylist(items);
-
-  const vf = [
-    `scale=${config.width}:${config.height}:force_original_aspect_ratio=decrease`,
-    `pad=${config.width}:${config.height}:(ow-iw)/2:(oh-ih)/2`,
-    `fps=${config.fps}`,
-    'format=yuv420p',
-  ].join(',');
+  const mergedVideo = buildMergedVideo(items, config);
 
   const stdout = openLog('/tmp/kurage-youtube-shorts-ffmpeg.log');
   const stderr = openLog('/tmp/kurage-youtube-shorts-ffmpeg.err.log');
@@ -245,38 +304,12 @@ async function start() {
     [
       '-hide_banner',
       '-re',
-      '-f',
-      'concat',
-      '-safe',
-      '0',
       '-i',
-      PLAYLIST_PATH,
-      '-vf',
-      vf,
-      '-af',
-      'aresample=44100',
+      mergedVideo,
       '-c:v',
-      'libx264',
-      '-preset',
-      'veryfast',
-      '-tune',
-      'zerolatency',
-      '-b:v',
-      config.videoBitrate,
-      '-maxrate',
-      config.videoBitrate,
-      '-bufsize',
-      '5000k',
-      '-pix_fmt',
-      'yuv420p',
-      '-g',
-      String(config.fps * 2),
+      'copy',
       '-c:a',
-      'aac',
-      '-b:a',
-      config.audioBitrate,
-      '-ar',
-      '44100',
+      'copy',
       '-f',
       'flv',
       destination,
@@ -295,6 +328,7 @@ async function start() {
     startedAt: new Date().toISOString(),
     ffmpegPid: child.pid,
     playlistPath: PLAYLIST_PATH,
+    mergedVideo,
     width: config.width,
     height: config.height,
     fps: config.fps,
