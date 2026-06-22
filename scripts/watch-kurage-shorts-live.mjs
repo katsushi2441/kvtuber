@@ -238,7 +238,7 @@ async function resolveAnnouncementLiveUrlAfterStart() {
 
 function announcementsNeedLiveUrl() {
   const aixsnsEnabled = String(process.env.KURAGE_SHORTS_ANNOUNCE_AIXSNS || '1') !== '0';
-  const xEnabled = String(process.env.KURAGE_SHORTS_ANNOUNCE_X || '1') !== '0';
+  const xEnabled = String(process.env.KURAGE_SHORTS_ANNOUNCE_X || '0') !== '0';
   return (aixsnsEnabled || xEnabled) && String(process.env.KURAGE_SHORTS_REQUIRE_LIVE_URL || '1') !== '0';
 }
 
@@ -376,7 +376,7 @@ async function postAixsnsAnnouncement(items, liveUrl, content = buildAnnouncemen
 }
 
 function postXAnnouncement(items, liveUrl) {
-  if (String(process.env.KURAGE_SHORTS_ANNOUNCE_X || '1') === '0') {
+  if (String(process.env.KURAGE_SHORTS_ANNOUNCE_X || '0') === '0') {
     return { skipped: true, reason: 'disabled' };
   }
   if (!liveUrl) {
@@ -1062,7 +1062,7 @@ function status() {
         },
         announcement: {
           aixsnsEnabled: String(process.env.KURAGE_SHORTS_ANNOUNCE_AIXSNS || '1') !== '0',
-          xEnabled: String(process.env.KURAGE_SHORTS_ANNOUNCE_X || '1') !== '0',
+          xEnabled: String(process.env.KURAGE_SHORTS_ANNOUNCE_X || '0') !== '0',
           hasTwitterCli: commandExists('twitter'),
           xAuthenticated: xAuth.authenticated,
           xAuthReason: xAuth.authenticated ? '' : xAuth.reason,
