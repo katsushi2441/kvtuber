@@ -111,6 +111,13 @@ function getAixsnsApiUrl() {
   return String(process.env.AIXSNS_API || DEFAULT_AIXSNS_API).trim();
 }
 
+function commandExists(command) {
+  const result = spawnSync('bash', ['-lc', `command -v ${JSON.stringify(command)}`], {
+    encoding: 'utf8',
+  });
+  return result.status === 0;
+}
+
 function buildAnnouncementContent(items, liveUrl) {
   const titles = items
     .map((item, index) => `${index + 1}. ${item.title}`)
@@ -125,6 +132,34 @@ function buildAnnouncementContent(items, liveUrl) {
     '',
     '#Kurage #AI動画生成 #YouTubeLive #エクスブリッジ',
   ].join('\n');
+}
+
+function buildXAnnouncementContent(items, liveUrl) {
+  const firstTitle = items[0]?.title ? `\n\n1本目: ${items[0].title}` : '';
+  const base = `Kurageショート動画のYouTube Live配信を開始しました。\n\n新しく追加されたショート動画5本を連続配信中です。${firstTitle}\n\n${liveUrl}\n\n#Kurage #AI動画生成 #YouTubeLive`;
+  if (base.length <= 280) return base;
+  return `Kurageショート動画のYouTube Live配信を開始しました。\n\n新しく追加されたショート動画5本を連続配信中です。\n\n${liveUrl}\n\n#Kurage #AI動画生成 #YouTubeLive`;
+}
+
+function twitterAuthStatus() {
+  if (!commandExists('twitter')) {
+    return { authenticated: false, reason: 'twitter-cli-not-found' };
+  }
+  const auth = spawnSync('twitter', ['status'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+    env: { ...process.env },
+  });
+  const output = `${auth.stdout}\n${auth.stderr}`;
+  if (auth.status !== 0 || /not_authenticated/i.test(output)) {
+    return {
+      authenticated: false,
+      reason: 'twitter-not-authenticated',
+      detail: output.slice(0, 500),
+    };
+  }
+  return { authenticated: true };
 }
 
 async function postAixsnsAnnouncement(items, liveUrl) {
@@ -163,6 +198,45 @@ async function postAixsnsAnnouncement(items, liveUrl) {
     skipped: false,
     id: item.id || null,
     url: item.id ? `https://aixec.exbridge.jp/sns.php?id=${item.id}` : '',
+  };
+}
+
+function postXAnnouncement(items, liveUrl) {
+  if (String(process.env.KURAGE_SHORTS_ANNOUNCE_X || '1') === '0') {
+    return { skipped: true, reason: 'disabled' };
+  }
+  if (!liveUrl) {
+    return { skipped: true, reason: 'missing-youtube-live-url' };
+  }
+  if (!commandExists('twitter')) {
+    return { skipped: true, reason: 'twitter-cli-not-found' };
+  }
+
+  const auth = twitterAuthStatus();
+  if (!auth.authenticated) {
+    return {
+      skipped: true,
+      reason: auth.reason,
+      detail: auth.detail,
+    };
+  }
+
+  const content = buildXAnnouncementContent(items, liveUrl);
+  const result = spawnSync('twitter', ['post', content], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+    env: { ...process.env },
+  });
+  if (result.status !== 0) {
+    throw new Error(`X announcement failed: ${(result.stderr || result.stdout || '').slice(0, 500)}`);
+  }
+  const output = `${result.stdout}\n${result.stderr}`.trim();
+  const url = output.match(/https?:\/\/(?:x|twitter)\.com\/[^\s"']+/)?.[0] || '';
+  return {
+    skipped: false,
+    url,
+    output: output.slice(0, 500),
   };
 }
 
@@ -271,6 +345,7 @@ async function runOnce() {
   });
   const result = startBatch(batch);
   let announcement = { skipped: true, reason: 'not-attempted' };
+  let xAnnouncement = { skipped: true, reason: 'not-attempted' };
   try {
     announcement = await postAixsnsAnnouncement(batch, getYoutubeLiveUrl());
     log('AIxSNS announcement handled', announcement);
@@ -281,12 +356,23 @@ async function runOnce() {
     };
     log('AIxSNS announcement failed', announcement);
   }
+  try {
+    xAnnouncement = postXAnnouncement(batch, getYoutubeLiveUrl());
+    log('X announcement handled', xAnnouncement);
+  } catch (error) {
+    xAnnouncement = {
+      skipped: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+    log('X announcement failed', xAnnouncement);
+  }
   markStreamed(batch.map((item) => item.jobId), 'auto-live-started', {
     youtubeLiveUrl: getYoutubeLiveUrl(),
     announcement,
+    xAnnouncement,
   });
-  log('started YouTube Live batch', { ffmpegPid: result.status?.ffmpegPid, announcement });
-  return { started: true, result, announcement };
+  log('started YouTube Live batch', { ffmpegPid: result.status?.ffmpegPid, announcement, xAnnouncement });
+  return { started: true, result, announcement, xAnnouncement };
 }
 
 async function daemon() {
@@ -314,6 +400,7 @@ function status() {
   const { state, pending } = pendingShorts();
   const live = liveStatus();
   const pid = readPid(WATCHER_PID_PATH);
+  const xAuth = twitterAuthStatus();
   console.log(
     JSON.stringify(
       {
@@ -332,6 +419,10 @@ function status() {
         },
         announcement: {
           aixsnsEnabled: String(process.env.KURAGE_SHORTS_ANNOUNCE_AIXSNS || '1') !== '0',
+          xEnabled: String(process.env.KURAGE_SHORTS_ANNOUNCE_X || '1') !== '0',
+          hasTwitterCli: commandExists('twitter'),
+          xAuthenticated: xAuth.authenticated,
+          xAuthReason: xAuth.authenticated ? '' : xAuth.reason,
           hasYoutubeLiveUrl: Boolean(getYoutubeLiveUrl()),
           youtubeLiveUrl: getYoutubeLiveUrl(),
           aixsnsApi: getAixsnsApiUrl(),

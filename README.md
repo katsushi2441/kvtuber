@@ -109,6 +109,16 @@ npm run youtube-live:shorts-watch -- start
 
 When `YOUTUBE_LIVE_URL` is set, the watcher posts a live announcement to AIxSNS after the RTMP stream starts. AgentReach is intentionally not used for X posting because its supported scope is internet/platform retrieval, not write actions such as posting, replying, or liking.
 
+X announcement posting is handled by `twitter-cli`, matching the VWork technical note `2026-06-14-agent-reach-x-no-api.md`. Configure a dedicated X account with Cookie-based auth before enabling production posting:
+
+```bash
+export TWITTER_AUTH_TOKEN="..."
+export TWITTER_CT0="..."
+twitter status
+```
+
+If `twitter-cli` is authenticated, the Kurage Shorts watcher also posts the YouTube Live URL to X. If authentication is missing or expired, the watcher logs `twitter-not-authenticated` and continues the YouTube Live plus AIxSNS flow without inventing a fake X result.
+
 ## Relationship to Kurage
 
 `kvtuber` is the reusable AI avatar runtime. Application repositories can provide brand-specific avatars, scripts, content packs, and deployment settings.
