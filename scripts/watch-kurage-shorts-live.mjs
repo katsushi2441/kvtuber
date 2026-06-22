@@ -430,6 +430,7 @@ function defaultState() {
   return {
     streamedJobIds: [],
     batches: [],
+    scheduledBatches: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -442,6 +443,7 @@ function loadState() {
     ...state,
     streamedJobIds: Array.isArray(state.streamedJobIds) ? state.streamedJobIds : [],
     batches: Array.isArray(state.batches) ? state.batches : [],
+    scheduledBatches: Array.isArray(state.scheduledBatches) ? state.scheduledBatches : [],
   };
 }
 
@@ -458,6 +460,10 @@ function getMinBatchSize() {
 
 function getMaxBatchSize() {
   return Math.max(getMinBatchSize(), Math.floor(numberEnv('KURAGE_SHORTS_MAX_BATCH_SIZE', DEFAULT_MAX_BATCH_SIZE)));
+}
+
+function getReservationBatchSize() {
+  return Math.max(1, Math.floor(numberEnv('KURAGE_SHORTS_RESERVATION_BATCH_SIZE', getMinBatchSize())));
 }
 
 function getCooldownHours() {
@@ -485,6 +491,119 @@ function dateKeyInTimeZone(date, timeZone = getPolicyTimeZone()) {
 
 function autoLiveBatches(state) {
   return (state.batches || []).filter((batch) => batch.reason === 'auto-live-started' && batch.recordedAt);
+}
+
+function activeScheduledBatches(state) {
+  return (state.scheduledBatches || []).filter((batch) => batch.status === 'scheduled' || batch.status === 'running');
+}
+
+function scheduledTimeMs(batch) {
+  const value = Date.parse(batch.scheduledFor || batch.recordedAt || '');
+  return Number.isFinite(value) ? value : 0;
+}
+
+function scheduledJobIdSet(state) {
+  const ids = new Set();
+  for (const batch of activeScheduledBatches(state)) {
+    for (const jobId of batch.jobIds || []) ids.add(jobId);
+  }
+  return ids;
+}
+
+function reservationRecords(state, extra = []) {
+  const completed = autoLiveBatches(state).map((batch) => ({
+    at: batch.recordedAt,
+    type: 'completed',
+  }));
+  const scheduled = (state.scheduledBatches || [])
+    .filter((batch) => batch.status === 'scheduled' || batch.status === 'running' || batch.status === 'completed')
+    .map((batch) => ({
+      at: batch.scheduledFor || batch.startedAt || batch.completedAt || batch.recordedAt,
+      type: batch.status,
+    }));
+  return [...completed, ...scheduled, ...extra]
+    .map((record) => ({ ...record, atMs: Date.parse(record.at || '') }))
+    .filter((record) => Number.isFinite(record.atMs));
+}
+
+function streamsOnDateKey(records, key) {
+  return records.filter((record) => dateKeyInTimeZone(new Date(record.atMs)) === key).length;
+}
+
+function nextReservationDate(state, now = new Date(), extraRecords = []) {
+  const cooldownMs = getCooldownHours() * 60 * 60 * 1000;
+  const records = reservationRecords(state, extraRecords);
+  const latestMs = records.reduce((max, record) => Math.max(max, record.atMs), 0);
+  let candidateMs = Math.max(now.getTime(), latestMs ? latestMs + cooldownMs : now.getTime());
+  const maxStreamsPerDay = getMaxStreamsPerDay();
+
+  for (let guard = 0; guard < 200; guard += 1) {
+    const candidate = new Date(candidateMs);
+    const key = dateKeyInTimeZone(candidate);
+    if (streamsOnDateKey(records, key) < maxStreamsPerDay) return candidate;
+    candidateMs += Math.max(cooldownMs, 60 * 60 * 1000);
+  }
+
+  return new Date(candidateMs);
+}
+
+function createReservationId(scheduledFor, index) {
+  const compact = scheduledFor.replace(/[^0-9TZ]/g, '').replace(/Z$/, '');
+  return `shorts-${compact}-${String(index + 1).padStart(2, '0')}`;
+}
+
+function reservePendingBatches(state, pending, now = new Date()) {
+  const batchSize = getReservationBatchSize();
+  const scheduledIds = scheduledJobIdSet(state);
+  const candidates = pending.filter((item) => !scheduledIds.has(item.jobId));
+  if (candidates.length < batchSize) return { state, created: [] };
+
+  const nextState = {
+    ...state,
+    scheduledBatches: [...(state.scheduledBatches || [])],
+  };
+  const created = [];
+  const extraRecords = [];
+  let index = 0;
+
+  while (candidates.length - index >= batchSize) {
+    const batchItems = candidates.slice(index, index + batchSize);
+    const scheduledForDate = nextReservationDate(nextState, now, extraRecords);
+    const scheduledFor = scheduledForDate.toISOString();
+    const reservation = {
+      id: createReservationId(scheduledFor, nextState.scheduledBatches.length),
+      status: 'scheduled',
+      scheduledFor,
+      jobIds: batchItems.map((item) => item.jobId),
+      titles: batchItems.map((item) => item.title),
+      createdAt: now.toISOString(),
+      reason: 'pending-kurage-shorts',
+    };
+    nextState.scheduledBatches.push(reservation);
+    created.push(reservation);
+    extraRecords.push({ at: scheduledFor, type: 'scheduled', atMs: scheduledForDate.getTime() });
+    index += batchSize;
+  }
+
+  if (created.length > 0) saveState(nextState);
+  return { state: nextState, created };
+}
+
+function dueScheduledBatch(state, now = new Date()) {
+  return activeScheduledBatches(state)
+    .filter((batch) => batch.status === 'scheduled' && scheduledTimeMs(batch) <= now.getTime())
+    .sort((a, b) => scheduledTimeMs(a) - scheduledTimeMs(b))[0] || null;
+}
+
+function updateScheduledBatch(state, id, patch) {
+  const nextState = {
+    ...state,
+    scheduledBatches: (state.scheduledBatches || []).map((batch) =>
+      batch.id === id ? { ...batch, ...patch, updatedAt: new Date().toISOString() } : batch,
+    ),
+  };
+  saveState(nextState);
+  return nextState;
 }
 
 function streamPolicyStatus(state, now = new Date()) {
@@ -593,28 +712,73 @@ function pendingShorts() {
 
 async function runOnce() {
   const batchSize = getMinBatchSize();
-  const maxBatchSize = getMaxBatchSize();
+  const reservationBatchSize = getReservationBatchSize();
+  const now = new Date();
   const live = liveStatus();
   if (live.running) {
     log('live stream is already running; watcher will wait', { ffmpegPid: live.ffmpegPid });
     return { started: false, reason: 'live-running' };
   }
 
-  const { state, pending } = pendingShorts();
+  const { state: currentState, pending } = pendingShorts();
   if (pending.length < batchSize) {
     log('not enough new Kurage shorts yet', { pending: pending.length, needed: batchSize });
     return { started: false, reason: 'not-enough-pending', pending: pending.length };
   }
 
-  const policy = streamPolicyStatus(state);
-  if (!policy.canStart) {
-    log('Kurage shorts live policy is waiting before next stream', {
+  const { state, created } = reservePendingBatches(currentState, pending, now);
+  if (created.length > 0) {
+    log('reserved Kurage shorts live batches', {
+      created: created.map((reservation) => ({
+        id: reservation.id,
+        scheduledFor: reservation.scheduledFor,
+        jobIds: reservation.jobIds,
+      })),
+      pending: pending.length,
+      reservationBatchSize,
+    });
+  }
+
+  const dueReservation = dueScheduledBatch(state, now);
+  if (!dueReservation) {
+    const nextReservation = activeScheduledBatches(state)
+      .filter((batch) => batch.status === 'scheduled')
+      .sort((a, b) => scheduledTimeMs(a) - scheduledTimeMs(b))[0] || null;
+    log('no reserved Kurage shorts live batch is due yet', {
       pending: pending.length,
       needed: batchSize,
-      maxBatchSize,
-      policy,
+      reservationBatchSize,
+      scheduledCount: activeScheduledBatches(state).length,
+      nextScheduledFor: nextReservation?.scheduledFor || '',
     });
-    return { started: false, reason: policy.reason, pending: pending.length, policy };
+    return {
+      started: false,
+      reason: 'reservation-waiting',
+      pending: pending.length,
+      createdReservations: created.length,
+      nextScheduledFor: nextReservation?.scheduledFor || '',
+    };
+  }
+
+  const pendingById = new Map(pending.map((item) => [item.jobId, item]));
+  const batch = dueReservation.jobIds.map((jobId) => pendingById.get(jobId)).filter(Boolean);
+  if (batch.length !== dueReservation.jobIds.length) {
+    updateScheduledBatch(state, dueReservation.id, {
+      status: 'failed',
+      failedAt: now.toISOString(),
+      error: 'reserved job is no longer pending or could not be loaded',
+    });
+    log('reserved Kurage shorts live batch could not be loaded; keeping remaining videos pending', {
+      reservationId: dueReservation.id,
+      jobIds: dueReservation.jobIds,
+      loadedJobIds: batch.map((item) => item.jobId),
+    });
+    return {
+      started: false,
+      reason: 'reserved-batch-not-loadable',
+      pending: pending.length,
+      reservationId: dueReservation.id,
+    };
   }
 
   const configuredAnnouncementLiveUrl = getAnnouncementLiveUrl();
@@ -643,18 +807,28 @@ async function runOnce() {
     return { started: false, reason: 'missing-youtube-stream-key', pending: pending.length };
   }
 
-  const batch = pending.slice(0, Math.min(maxBatchSize, pending.length));
-  log('starting YouTube Live for new Kurage shorts batch', {
+  updateScheduledBatch(state, dueReservation.id, {
+    status: 'running',
+    startedAt: now.toISOString(),
+  });
+  log('starting reserved YouTube Live for Kurage shorts batch', {
+    reservationId: dueReservation.id,
+    scheduledFor: dueReservation.scheduledFor,
     jobIds: batch.map((item) => item.jobId),
     batchSize: batch.length,
     pending: pending.length,
-    policy,
   });
   let result;
   try {
     result = startBatch(batch);
   } catch (error) {
+    updateScheduledBatch(loadState(), dueReservation.id, {
+      status: 'failed',
+      failedAt: new Date().toISOString(),
+      error: error instanceof Error ? error.message : String(error),
+    });
     log('YouTube Live RTMP start failed; batch will remain pending', {
+      reservationId: dueReservation.id,
       jobIds: batch.map((item) => item.jobId),
       error: error instanceof Error ? error.message : String(error),
     });
@@ -662,6 +836,7 @@ async function runOnce() {
       started: false,
       reason: 'youtube-rtmp-start-failed',
       pending: pending.length,
+      reservationId: dueReservation.id,
       error: error instanceof Error ? error.message : String(error),
     };
   }
@@ -669,7 +844,14 @@ async function runOnce() {
   const resolvedAnnouncementLiveUrl = await resolveAnnouncementLiveUrlAfterStart();
   const announcementLiveUrl = resolvedAnnouncementLiveUrl.url;
   if (!announcementLiveUrl && announcementsNeedLiveUrl()) {
+    updateScheduledBatch(loadState(), dueReservation.id, {
+      status: 'failed',
+      failedAt: new Date().toISOString(),
+      error: 'youtube-watch-url-not-confirmed',
+      youtubeLiveUrlResolution: resolvedAnnouncementLiveUrl,
+    });
     log('YouTube Live watch URL could not be confirmed after stream start; stopping stream and keeping batch pending', {
+      reservationId: dueReservation.id,
       resolution: resolvedAnnouncementLiveUrl,
       ffmpegPid: result.status?.ffmpegPid,
     });
@@ -678,6 +860,7 @@ async function runOnce() {
       started: false,
       reason: 'youtube-watch-url-not-confirmed',
       pending: pending.length,
+      reservationId: dueReservation.id,
       resolution: resolvedAnnouncementLiveUrl,
     };
   }
@@ -704,13 +887,29 @@ async function runOnce() {
     log('X announcement failed', xAnnouncement);
   }
   markStreamed(batch.map((item) => item.jobId), 'auto-live-started', {
+    reservationId: dueReservation.id,
+    scheduledFor: dueReservation.scheduledFor,
     youtubeLiveUrl: announcementLiveUrl,
     youtubeLiveUrlResolution: resolvedAnnouncementLiveUrl,
     announcement,
     xAnnouncement,
   });
-  log('started YouTube Live batch', { ffmpegPid: result.status?.ffmpegPid, announcement, xAnnouncement });
-  return { started: true, result, announcement, xAnnouncement };
+  updateScheduledBatch(loadState(), dueReservation.id, {
+    status: 'completed',
+    completedAt: new Date().toISOString(),
+    youtubeLiveUrl: announcementLiveUrl,
+    youtubeLiveUrlResolution: resolvedAnnouncementLiveUrl,
+    announcement,
+    xAnnouncement,
+    ffmpegPid: result.status?.ffmpegPid,
+  });
+  log('started reserved YouTube Live batch', {
+    reservationId: dueReservation.id,
+    ffmpegPid: result.status?.ffmpegPid,
+    announcement,
+    xAnnouncement,
+  });
+  return { started: true, result, announcement, xAnnouncement, reservationId: dueReservation.id };
 }
 
 async function daemon() {
@@ -740,6 +939,10 @@ function status() {
   const pid = readPid(WATCHER_PID_PATH);
   const xAuth = twitterAuthStatus();
   const policy = streamPolicyStatus(state);
+  const scheduled = activeScheduledBatches(state)
+    .filter((batch) => batch.status === 'scheduled')
+    .sort((a, b) => scheduledTimeMs(a) - scheduledTimeMs(b));
+  const runningReservations = activeScheduledBatches(state).filter((batch) => batch.status === 'running');
   console.log(
     JSON.stringify(
       {
@@ -774,6 +977,29 @@ function status() {
         streamedCount: state.streamedJobIds.length,
         pendingCount: pending.length,
         pendingJobIds: pending.map((item) => item.jobId),
+        reservations: {
+          reservationBatchSize: getReservationBatchSize(),
+          scheduledCount: scheduled.length,
+          runningCount: runningReservations.length,
+          nextScheduledFor: scheduled[0]?.scheduledFor || '',
+          scheduled: scheduled.map((batch) => ({
+            id: batch.id,
+            status: batch.status,
+            scheduledFor: batch.scheduledFor,
+            jobIds: batch.jobIds,
+            titles: batch.titles,
+          })),
+          recentFailed: (state.scheduledBatches || [])
+            .filter((batch) => batch.status === 'failed')
+            .slice(-5)
+            .map((batch) => ({
+              id: batch.id,
+              scheduledFor: batch.scheduledFor,
+              failedAt: batch.failedAt,
+              error: batch.error,
+              jobIds: batch.jobIds,
+            })),
+        },
         streamPolicy: {
           minBatchSize: getMinBatchSize(),
           maxBatchSize: getMaxBatchSize(),
