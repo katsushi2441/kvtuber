@@ -114,17 +114,23 @@ When an announcement URL is available, the watcher posts a live announcement to 
 Production throttling is enabled by default so worker bursts do not create back-to-back live streams. The watcher turns pending videos into explicit reservations in `storage/kurage-shorts-live-watcher.json`, then starts each reserved batch only when its `scheduledFor` time arrives. Failed confirmations stay pending instead of being marked as streamed:
 
 ```bash
-# Defaults: wait for at least 5 new shorts, stream up to 10 at once,
-# leave 4 hours between streams, and cap automatic streams at 4 per day.
+# Defaults: wait for at least 5 new shorts, reserve 5 at a time,
+# leave 4 hours between streams, and cap automatic streams at 6 per day.
 KURAGE_SHORTS_BATCH_SIZE=5
 KURAGE_SHORTS_RESERVATION_BATCH_SIZE=5
 KURAGE_SHORTS_MAX_BATCH_SIZE=10
 KURAGE_SHORTS_LIVE_COOLDOWN_HOURS=4
-KURAGE_SHORTS_MAX_STREAMS_PER_DAY=4
+KURAGE_SHORTS_MAX_STREAMS_PER_DAY=6
 KURAGE_SHORTS_POLICY_TIME_ZONE="Asia/Tokyo"
 ```
 
 If 10 to 20 videos are generated in a short worker burst, they are reserved as 5-video batches spaced by the cooldown window instead of triggering immediate consecutive live streams. Use `npm run youtube-live:shorts-watch -- status` to inspect the reservation list and next scheduled start.
+
+To recover from a stopped live stream, requeue every short after the problem video and reserve the first recovered batch immediately:
+
+```bash
+npm run youtube-live:shorts-watch -- requeue-after 8b1d36f792634947
+```
 
 X announcement posting is handled by `twitter-cli`, matching the VWork technical note `2026-06-14-agent-reach-x-no-api.md`. Configure a dedicated X account with Cookie-based auth before enabling production posting:
 

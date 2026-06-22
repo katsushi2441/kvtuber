@@ -17,7 +17,7 @@ const DEFAULT_INTERVAL_SECONDS = 60;
 const DEFAULT_BATCH_SIZE = 5;
 const DEFAULT_MAX_BATCH_SIZE = 10;
 const DEFAULT_COOLDOWN_HOURS = 4;
-const DEFAULT_MAX_STREAMS_PER_DAY = 4;
+const DEFAULT_MAX_STREAMS_PER_DAY = 6;
 const DEFAULT_POLICY_TIME_ZONE = 'Asia/Tokyo';
 const DEFAULT_SCAN_LIMIT = 200;
 const DEFAULT_AIXSNS_API = 'https://aixec.exbridge.jp/api.php?path=posts';
@@ -589,6 +589,47 @@ function reservePendingBatches(state, pending, now = new Date()) {
   return { state: nextState, created };
 }
 
+function reserveItemsAsBatches(state, items, now = new Date(), options = {}) {
+  const batchSize = getReservationBatchSize();
+  const candidates = options.skipAlreadyScheduled
+    ? items.filter((item) => !scheduledJobIdSet(state).has(item.jobId))
+    : items;
+  if (candidates.length < batchSize) return { state, created: [] };
+
+  const nextState = {
+    ...state,
+    scheduledBatches: [...(state.scheduledBatches || [])],
+  };
+  const created = [];
+  const extraRecords = [];
+  let index = 0;
+
+  while (candidates.length - index >= batchSize) {
+    const batchItems = candidates.slice(index, index + batchSize);
+    const scheduledForDate =
+      options.immediateFirst && created.length === 0
+        ? now
+        : nextReservationDate(nextState, now, extraRecords);
+    const scheduledFor = scheduledForDate.toISOString();
+    const reservation = {
+      id: createReservationId(scheduledFor, nextState.scheduledBatches.length),
+      status: 'scheduled',
+      scheduledFor,
+      jobIds: batchItems.map((item) => item.jobId),
+      titles: batchItems.map((item) => item.title),
+      createdAt: now.toISOString(),
+      reason: options.reason || 'pending-kurage-shorts',
+    };
+    nextState.scheduledBatches.push(reservation);
+    created.push(reservation);
+    extraRecords.push({ at: scheduledFor, type: 'scheduled', atMs: scheduledForDate.getTime() });
+    index += batchSize;
+  }
+
+  if (created.length > 0) saveState(nextState);
+  return { state: nextState, created };
+}
+
 function dueScheduledBatch(state, now = new Date()) {
   return activeScheduledBatches(state)
     .filter((batch) => batch.status === 'scheduled' && scheduledTimeMs(batch) <= now.getTime())
@@ -604,6 +645,66 @@ function updateScheduledBatch(state, id, patch) {
   };
   saveState(nextState);
   return nextState;
+}
+
+function requeueAfter(anchorJobId) {
+  const now = new Date();
+  const all = listShorts(DEFAULT_SCAN_LIMIT).sort((a, b) => a.modifiedAt - b.modifiedAt);
+  const anchorIndex = all.findIndex((item) => item.jobId === anchorJobId);
+  if (anchorIndex < 0) throw new Error(`anchor job not found: ${anchorJobId}`);
+
+  const targets = all.slice(anchorIndex + 1);
+  const targetIds = new Set(targets.map((item) => item.jobId));
+  const state = loadState();
+  const beforeStreamedCount = state.streamedJobIds.length;
+  const nextState = {
+    ...state,
+    streamedJobIds: state.streamedJobIds.filter((jobId) => !targetIds.has(jobId)),
+    batches: (state.batches || []).map((batch) => {
+      const intersects = (batch.jobIds || []).some((jobId) => targetIds.has(jobId));
+      if (!intersects || batch.reason !== 'auto-live-started') return batch;
+      return {
+        ...batch,
+        reason: 'auto-live-invalidated',
+        invalidatedAt: now.toISOString(),
+        invalidatedBy: 'requeue-after',
+        invalidatedAfterJobId: anchorJobId,
+      };
+    }),
+    scheduledBatches: (state.scheduledBatches || []).map((batch) => {
+      const intersects = (batch.jobIds || []).some((jobId) => targetIds.has(jobId));
+      if (!intersects || (batch.status !== 'scheduled' && batch.status !== 'running')) return batch;
+      return {
+        ...batch,
+        status: 'cancelled',
+        cancelledAt: now.toISOString(),
+        cancelledBy: 'requeue-after',
+        cancelledAfterJobId: anchorJobId,
+      };
+    }),
+  };
+  saveState(nextState);
+
+  const reserved = reserveItemsAsBatches(nextState, targets, now, {
+    immediateFirst: true,
+    reason: `requeue-after-${anchorJobId}`,
+  });
+  return {
+    ok: true,
+    anchorJobId,
+    anchorTitle: all[anchorIndex].title,
+    targetCount: targets.length,
+    removedStreamedCount: beforeStreamedCount - reserved.state.streamedJobIds.length,
+    reservationBatchSize: getReservationBatchSize(),
+    createdReservations: reserved.created.map((reservation) => ({
+      id: reservation.id,
+      scheduledFor: reservation.scheduledFor,
+      jobIds: reservation.jobIds,
+      titles: reservation.titles,
+    })),
+    leftoverCount: targets.length % getReservationBatchSize(),
+    leftoverJobIds: targets.slice(targets.length - (targets.length % getReservationBatchSize())).map((item) => item.jobId),
+  };
 }
 
 function streamPolicyStatus(state, now = new Date()) {
@@ -1055,6 +1156,10 @@ try {
   else if (command === 'init-current') {
     const ids = currentStreamingJobIds();
     console.log(JSON.stringify(markStreamed(ids, 'manual-init-current'), null, 2));
+  } else if (command === 'requeue-after') {
+    const anchorJobId = process.argv[3] || '';
+    if (!anchorJobId) throw new Error('usage: requeue-after <anchorJobId>');
+    console.log(JSON.stringify(requeueAfter(anchorJobId), null, 2));
   } else {
     throw new Error(`unknown command: ${command}`);
   }
