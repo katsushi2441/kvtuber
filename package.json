@@ -11,7 +11,8 @@
     "start-program": "node scripts/start-broadcast-program.mjs",
     "youtube-live": "node scripts/youtube-live-rtmp.mjs",
     "youtube-live:shorts": "node scripts/youtube-live-kurage-shorts.mjs",
-    "youtube-live:shorts-watch": "node scripts/watch-kurage-shorts-live.mjs"
+    "youtube-live:shorts-watch": "node scripts/watch-kurage-shorts-live.mjs",
+    "youtube-shorts:upload-watch": "node scripts/watch-kurage-shorts-upload.mjs"
   },
   "dependencies": {
     "@aituber-onair/core": "^0.26.3",

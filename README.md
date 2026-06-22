@@ -156,6 +156,49 @@ BROWSER_USE_CDP_URL="http://127.0.0.1:9223"
 BROWSER_USE_X_HEADFUL=1
 ```
 
+## YouTube Shorts Upload Automation
+
+Use `scripts/watch-kurage-shorts-upload.mjs` for unattended normal YouTube Shorts uploads. This is separate from YouTube Live. It does not require YouTube Studio, OBS, RTMP, or a stream key.
+
+The watcher selects existing Kurage videos in this order:
+
+- only completed Kurage jobs with a real vertical short video, 180 seconds or less
+- skip any job that already has `youtube_url` or `youtube_video_id`
+- sort remaining videos by `views` descending, then by newest video file
+- upload one video at a time as public YouTube Shorts
+- after success, write `youtube_url`, `youtube_video_id`, and upload timestamps back to the Kurage job JSON
+
+Production cadence:
+
+```bash
+KURAGE_SHORTS_UPLOAD_COOLDOWN_HOURS=8
+KURAGE_SHORTS_UPLOAD_MAX_PER_DAY=3
+KURAGE_SHORTS_UPLOAD_TIME_ZONE="Asia/Tokyo"
+```
+
+Run once:
+
+```bash
+npm run youtube-shorts:upload-watch -- run-once
+```
+
+Inspect status and the next candidate:
+
+```bash
+npm run youtube-shorts:upload-watch -- status
+```
+
+Run as a user service:
+
+```bash
+mkdir -p ~/.config/systemd/user
+cp systemd/kvtuber-youtube-shorts-upload-watcher.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now kvtuber-youtube-shorts-upload-watcher.service
+```
+
+Do not use the old live-stream watcher for unattended posting. The live watcher is for supervised YouTube Live only. The upload watcher is the production automation for posting high-view Kurage videos to YouTube Shorts.
+
 ## Relationship to Kurage
 
 `kvtuber` is the reusable AI avatar runtime. Application repositories can provide brand-specific avatars, scripts, content packs, and deployment settings.

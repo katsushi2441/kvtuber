@@ -1,0 +1,23 @@
+[Unit]
+Description=Kurage YouTube Shorts upload watcher
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/kojima/work/kvtuber
+Environment=KURAGE_JOBS_DIR=/home/kojima/work/kurage/storage/jobs
+Environment=YOUTUBE_UPLOAD_CWD=/home/kojima/work/airadio-scripted-mv
+Environment=YOUTUBE_UPLOAD_TOOL=/home/kojima/work/airadio-scripted-mv/tools/youtube/upload_youtube.py
+Environment=YOUTUBE_TOKEN_PATH=/home/kojima/work/airadio-scripted-mv/storage/youtube/token.json
+Environment=KURAGE_SHORTS_UPLOAD_COOLDOWN_HOURS=8
+Environment=KURAGE_SHORTS_UPLOAD_MAX_PER_DAY=3
+Environment=KURAGE_SHORTS_UPLOAD_TIME_ZONE=Asia/Tokyo
+Environment=KURAGE_SHORTS_UPLOAD_INTERVAL_SECONDS=300
+Environment=KURAGE_SHORTS_UPLOAD_PRIVACY=public
+ExecStart=/home/kojima/.nvm/versions/node/v20.20.2/bin/node /home/kojima/work/kvtuber/scripts/watch-kurage-shorts-upload.mjs watch
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=default.target
