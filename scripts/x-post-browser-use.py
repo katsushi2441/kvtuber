@@ -37,8 +37,6 @@ async def main() -> None:
     text = args.text.strip()
     if not text:
         raise SystemExit(json.dumps({"ok": False, "error": "text is empty"}, ensure_ascii=False))
-    if len(text) > 280:
-        raise SystemExit(json.dumps({"ok": False, "error": "text exceeds 280 characters"}, ensure_ascii=False))
 
     profile_kwargs = {
         "headless": not args.headful,
@@ -72,6 +70,9 @@ Post exactly the following text, without adding or removing anything:
 {text}
 POST_TEXT>>>
 
+Before clicking the final Post button, verify the composed text is exactly the POST_TEXT.
+Pay special attention that the first word is exactly "Kurage", not "KKurage".
+If the text is different, clear the composer and re-enter the exact POST_TEXT once.
 After clicking the final Post button, confirm the post is submitted.
 If X shows a CAPTCHA, verification, or login screen, stop and report the reason.
 """

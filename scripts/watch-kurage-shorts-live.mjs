@@ -144,13 +144,6 @@ function buildAnnouncementContent(items, liveUrl) {
   ].join('\n');
 }
 
-function buildXAnnouncementContent(items, liveUrl) {
-  const firstTitle = items[0]?.title ? `\n\n1本目: ${items[0].title}` : '';
-  const base = `Kurageショート動画のYouTube Live配信を開始しました。\n\n新しく追加されたショート動画5本を連続配信中です。${firstTitle}\n\n${liveUrl}\n\n#Kurage #AI動画生成 #YouTubeLive`;
-  if (base.length <= 280) return base;
-  return `Kurageショート動画のYouTube Live配信を開始しました。\n\n新しく追加されたショート動画5本を連続配信中です。\n\n${liveUrl}\n\n#Kurage #AI動画生成 #YouTubeLive`;
-}
-
 function twitterAuthStatus() {
   if (!commandExists('twitter')) {
     return { authenticated: false, reason: 'twitter-cli-not-found' };
@@ -211,7 +204,7 @@ function postXWithBrowserUse(content) {
   };
 }
 
-async function postAixsnsAnnouncement(items, liveUrl) {
+async function postAixsnsAnnouncement(items, liveUrl, content = buildAnnouncementContent(items, liveUrl)) {
   if (String(process.env.KURAGE_SHORTS_ANNOUNCE_AIXSNS || '1') === '0') {
     return { skipped: true, reason: 'disabled' };
   }
@@ -219,7 +212,6 @@ async function postAixsnsAnnouncement(items, liveUrl) {
     return { skipped: true, reason: 'missing-youtube-live-url' };
   }
 
-  const content = buildAnnouncementContent(items, liveUrl);
   const response = await fetch(getAixsnsApiUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -257,7 +249,7 @@ function postXAnnouncement(items, liveUrl) {
   if (!liveUrl) {
     return { skipped: true, reason: 'missing-youtube-live-url' };
   }
-  const content = buildXAnnouncementContent(items, liveUrl);
+  const content = buildAnnouncementContent(items, liveUrl);
   if (!commandExists('twitter')) {
     return postXWithBrowserUse(content);
   }
