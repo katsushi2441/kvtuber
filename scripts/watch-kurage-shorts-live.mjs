@@ -95,6 +95,26 @@ function liveStatus() {
   return parseJsonOutput(result.stdout).status || { running: false };
 }
 
+function liveConfigStatus() {
+  const result = runNode([SHORTS_SCRIPT, 'status']);
+  if (result.status !== 0) {
+    return {
+      ok: false,
+      hasStreamKey: false,
+      error: (result.stderr || result.stdout || 'failed to read live status').slice(0, 500),
+    };
+  }
+  const parsed = parseJsonOutput(result.stdout);
+  return {
+    ok: true,
+    hasStreamKey: Boolean(parsed.config?.hasStreamKey),
+    rtmpUrl: parsed.config?.rtmpUrl || '',
+    width: parsed.config?.width,
+    height: parsed.config?.height,
+    fps: parsed.config?.fps,
+  };
+}
+
 function startBatch(items) {
   const jobIds = items.map((item) => item.jobId);
   const result = runNode([SHORTS_SCRIPT, 'start', String(jobIds.length)], {
@@ -107,6 +127,15 @@ function startBatch(items) {
     throw new Error(result.stderr || result.stdout || 'failed to start Kurage shorts live');
   }
   return parseJsonOutput(result.stdout);
+}
+
+function stopBatch() {
+  const result = runNode([SHORTS_SCRIPT, 'stop']);
+  if (result.status !== 0) {
+    log('failed to stop Kurage shorts live after failed confirmation', {
+      error: (result.stderr || result.stdout || '').slice(0, 500),
+    });
+  }
 }
 
 function getYoutubeLiveUrl() {
@@ -204,7 +233,7 @@ async function resolveAnnouncementLiveUrlAfterStart() {
     if (attempt < attempts) await sleep(delayMs);
   }
 
-  return { url: channelLiveUrl, source: 'channel-live-url-fallback', attempts };
+  return { url: '', fallbackUrl: channelLiveUrl, source: 'unresolved-channel-live-url', attempts };
 }
 
 function announcementsNeedLiveUrl() {
@@ -598,6 +627,22 @@ async function runOnce() {
     return { started: false, reason: 'missing-youtube-live-url', pending: pending.length };
   }
 
+  const liveConfig = liveConfigStatus();
+  if (!liveConfig.hasStreamKey) {
+    log('YouTube stream key is missing; watcher will not start stream', {
+      pending: pending.length,
+      needed: batchSize,
+      liveConfig: {
+        ok: liveConfig.ok,
+        hasStreamKey: liveConfig.hasStreamKey,
+        rtmpUrl: liveConfig.rtmpUrl,
+        error: liveConfig.error,
+      },
+      hint: 'Set YOUTUBE_STREAM_KEY in the watcher environment or save streamKey in storage/youtube-live.json.',
+    });
+    return { started: false, reason: 'missing-youtube-stream-key', pending: pending.length };
+  }
+
   const batch = pending.slice(0, Math.min(maxBatchSize, pending.length));
   log('starting YouTube Live for new Kurage shorts batch', {
     jobIds: batch.map((item) => item.jobId),
@@ -605,13 +650,36 @@ async function runOnce() {
     pending: pending.length,
     policy,
   });
-  const result = startBatch(batch);
+  let result;
+  try {
+    result = startBatch(batch);
+  } catch (error) {
+    log('YouTube Live RTMP start failed; batch will remain pending', {
+      jobIds: batch.map((item) => item.jobId),
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {
+      started: false,
+      reason: 'youtube-rtmp-start-failed',
+      pending: pending.length,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+
   const resolvedAnnouncementLiveUrl = await resolveAnnouncementLiveUrlAfterStart();
   const announcementLiveUrl = resolvedAnnouncementLiveUrl.url;
   if (!announcementLiveUrl && announcementsNeedLiveUrl()) {
-    log('YouTube Live URL could not be resolved after stream start; announcements skipped', {
+    log('YouTube Live watch URL could not be confirmed after stream start; stopping stream and keeping batch pending', {
       resolution: resolvedAnnouncementLiveUrl,
+      ffmpegPid: result.status?.ffmpegPid,
     });
+    stopBatch();
+    return {
+      started: false,
+      reason: 'youtube-watch-url-not-confirmed',
+      pending: pending.length,
+      resolution: resolvedAnnouncementLiveUrl,
+    };
   }
   let announcement = { skipped: true, reason: 'not-attempted' };
   let xAnnouncement = { skipped: true, reason: 'not-attempted' };

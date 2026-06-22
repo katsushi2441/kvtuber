@@ -19,6 +19,7 @@ const MERGED_VIDEO_PATH = '/tmp/kurage-youtube-live-shorts-merged.mp4';
 const FFMPEG_BIN = existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
 const FFPROBE_BIN = existsSync('/usr/bin/ffprobe') ? '/usr/bin/ffprobe' : 'ffprobe';
 const DEFAULT_KURAGE_JOBS_DIR = '/home/kojima/work/kurage/storage/jobs';
+const DEFAULT_START_CONFIRM_SECONDS = 8;
 const DEFAULT_CONFIG = {
   rtmpUrl: 'rtmp://a.rtmp.youtube.com/live2',
   streamKey: '',
@@ -101,6 +102,25 @@ function readState() {
 
 function openLog(path) {
   return openSync(path, 'a');
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function readTail(path, maxBytes = 4096) {
+  try {
+    const content = readFileSync(path, 'utf8');
+    return content.slice(-maxBytes);
+  } catch {
+    return '';
+  }
+}
+
+function looksLikeFfmpegStreamError(text) {
+  return /(?:Server returned|Connection refused|Connection timed out|Input\/output error|Invalid argument|403 Forbidden|401 Unauthorized|Cannot open connection|Broken pipe|Operation not permitted)/i.test(
+    text || '',
+  );
 }
 
 function shellEscapeSingleQuoted(value) {
@@ -322,8 +342,12 @@ async function start() {
   writePlaylist(items);
   const mergedVideo = buildMergedVideo(items, config);
 
-  const stdout = openLog('/tmp/kurage-youtube-shorts-ffmpeg.log');
-  const stderr = openLog('/tmp/kurage-youtube-shorts-ffmpeg.err.log');
+  const stdoutPath = '/tmp/kurage-youtube-shorts-ffmpeg.log';
+  const stderrPath = '/tmp/kurage-youtube-shorts-ffmpeg.err.log';
+  writeFileSync(stdoutPath, '', 'utf8');
+  writeFileSync(stderrPath, '', 'utf8');
+  const stdout = openLog(stdoutPath);
+  const stderr = openLog(stderrPath);
   const child = spawn(
     FFMPEG_BIN,
     [
@@ -347,6 +371,23 @@ async function start() {
   );
   child.unref();
 
+  const confirmSeconds = Math.max(
+    0,
+    Number(process.env.KURAGE_SHORTS_START_CONFIRM_SECONDS || DEFAULT_START_CONFIRM_SECONDS),
+  );
+  if (confirmSeconds > 0) {
+    await sleep(confirmSeconds * 1000);
+    const stderrTail = readTail(stderrPath);
+    if (!isPidAlive(child.pid) || looksLikeFfmpegStreamError(stderrTail)) {
+      killPidGroup(child.pid);
+      throw new Error(
+        `YouTube RTMP送信の開始確認に失敗しました。ffmpegPid=${child.pid} log=${stderrPath} tail=${stderrTail
+          .replace(/\s+/g, ' ')
+          .slice(-500)}`,
+      );
+    }
+  }
+
   const state = {
     running: true,
     mode: 'kurage-shorts-playlist',
@@ -359,8 +400,9 @@ async function start() {
     fps: config.fps,
     items,
     logs: {
-      ffmpeg: '/tmp/kurage-youtube-shorts-ffmpeg.err.log',
+      ffmpeg: stderrPath,
     },
+    startConfirmedAt: new Date().toISOString(),
   };
   saveJson(STATE_PATH, state);
   console.log(JSON.stringify({ ok: true, status: state }, null, 2));
