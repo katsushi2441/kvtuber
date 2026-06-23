@@ -58,6 +58,15 @@ function stringEnv(name, fallback) {
   return String(raw).trim();
 }
 
+function normalizeViews(value) {
+  const views = Number(value || 0);
+  if (!Number.isFinite(views)) return 0;
+  // Legacy Kurage data used a cosmetic +9999 boost. Ranking and upload
+  // scheduling must use real view counts so boosted data cannot jump the queue.
+  if (views >= 9999) return Math.max(0, views - 9999);
+  return Math.max(0, views);
+}
+
 function run(command, args, options = {}) {
   return spawnSync(command, args, {
     cwd: ROOT,
@@ -174,6 +183,7 @@ function loadCandidates(limit = 50) {
     const meta = ffprobeVideo(videoFile);
     if (!isShortVideo(meta)) continue;
 
+    const rawViews = Number(job.views || 0);
     candidates.push({
       jobId,
       title: String(job.title || job.display_title || job.summary_title || jobId).trim(),
@@ -181,7 +191,8 @@ function loadCandidates(limit = 50) {
       articleUrl: String(job.article_url || job.related_article_url || job.tweet_url || job.source_url || '').trim(),
       source: job.source || '',
       contentType: job.content_type || '',
-      views: Number(job.views || 0),
+      views: normalizeViews(rawViews),
+      rawViews,
       createdAt: job.created_at || '',
       updatedAt: job.updated_at || '',
       videoFile,
@@ -553,7 +564,8 @@ function loadItemByJobId(jobId) {
     articleUrl: String(job.article_url || job.related_article_url || job.tweet_url || job.source_url || '').trim(),
     source: job.source || '',
     contentType: job.content_type || '',
-    views: Number(job.views || 0),
+    views: normalizeViews(job.views),
+    rawViews: Number(job.views || 0),
     createdAt: job.created_at || '',
     updatedAt: job.updated_at || '',
     videoFile,

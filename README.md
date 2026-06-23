@@ -164,7 +164,8 @@ The watcher selects existing Kurage videos in this order:
 
 - only completed Kurage jobs with a real vertical short video, 180 seconds or less
 - skip any job that already has `youtube_url` or `youtube_video_id`
-- sort remaining videos by `views` descending, then by newest video file
+- sort remaining videos by normalized `views` descending, then by newest video file
+- legacy Kurage data with a cosmetic `+9999` view boost is normalized before ranking, so boosted jobs cannot jump the queue
 - upload one video at a time as public YouTube Shorts
 - after success, write `youtube_url`, `youtube_video_id`, and upload timestamps back to the Kurage job JSON
 - after success, announce the upload to AIxSNS and, when enabled, X using the same concise text
