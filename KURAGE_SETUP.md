@@ -27,3 +27,15 @@ KVTUBER_ALLOWED_HOSTS=
 ```
 
 Production deployments should keep schedules, stream keys, private avatars, generated audio, and generated video outside Git.
+## Shared TTS pronunciation
+
+The local Edge-TTS shim normalizes only the text sent to speech synthesis using Kurage's shared TTS normalizer. Display text and chat/program text are not rewritten.
+
+Default path:
+
+```bash
+KURAGE_TTS_NORMALIZER_DIR=/home/kojima/work/kurage/backend
+```
+
+Add product names, OSS names, and acronyms to Kurage `config/tts_pronunciation.json` so Kurage, Kurage Voice Pro, and Kurage AI VTuber read them the same way.
+

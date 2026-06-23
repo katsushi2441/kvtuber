@@ -17,6 +17,41 @@ from pathlib import Path
 DEFAULT_VOICE = os.environ.get('KURAGE_TTS_VOICE', 'ja-JP-NanamiNeural')
 DEFAULT_RATE = os.environ.get('KURAGE_TTS_RATE', '+10%')
 DEFAULT_PITCH = os.environ.get('KURAGE_TTS_PITCH', '-15Hz')
+KURAGE_TTS_NORMALIZER_DIR = Path(
+    os.environ.get('KURAGE_TTS_NORMALIZER_DIR', '/home/kojima/work/kurage/backend'),
+)
+
+if KURAGE_TTS_NORMALIZER_DIR.exists() and str(KURAGE_TTS_NORMALIZER_DIR) not in sys.path:
+    sys.path.insert(0, str(KURAGE_TTS_NORMALIZER_DIR))
+
+try:
+    from tts_normalizer import normalize_tts_text as _kurage_normalize_tts_text
+except Exception:  # pragma: no cover - standalone fallback
+    _kurage_normalize_tts_text = None
+
+
+def normalize_tts_text(text: str) -> str:
+    if _kurage_normalize_tts_text is not None:
+        return _kurage_normalize_tts_text(text)
+    replacements = {
+        'Kurage': 'クラゲ',
+        'VWork': 'ブイワーク',
+        'kdeck': 'ケーデック',
+        'kvtuber': 'ケーブイチューバー',
+        'AIxSNS': 'エーアイエックス エスエヌエス',
+        'VTuber': 'ブイチューバー',
+        'YouTube': 'ユーチューブ',
+        'VOICEVOX': 'ボイスボックス',
+        'Live2D': 'ライブツーディー',
+        'VRM': 'ブイアールエム',
+        'LLM': 'エルエルエム',
+        'TTS': 'ティーティーエス',
+        'API': 'エーピーアイ',
+    }
+    normalized = text or ''
+    for src, dst in sorted(replacements.items(), key=lambda item: len(item[0]), reverse=True):
+        normalized = normalized.replace(src, dst)
+    return normalized
 
 
 def _rate_from_speed(speed: object) -> str:
@@ -43,6 +78,7 @@ async def main() -> int:
     if not text:
         print('input is required', file=sys.stderr)
         return 2
+    tts_text = normalize_tts_text(text)
 
     voice = str(payload.get('voice') or DEFAULT_VOICE).strip() or DEFAULT_VOICE
     rate = _rate_from_speed(payload.get('speed'))
@@ -52,7 +88,7 @@ async def main() -> int:
     import edge_tts
 
     communicate = edge_tts.Communicate(
-        text,
+        tts_text,
         voice=voice,
         rate=rate,
         pitch=DEFAULT_PITCH,
