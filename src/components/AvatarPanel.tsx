@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, useEffect, useState } from 'react';
 
 interface AvatarPanelProps {
   mouthLevel: number;
@@ -59,17 +59,6 @@ function useBlink() {
   }, []);
 
   return eyesClosed;
-}
-
-/** Select image key from mouth/eye state */
-function selectImageKey(
-  mouthOpen: boolean,
-  eyesClosed: boolean,
-): AvatarImageKey {
-  if (mouthOpen) {
-    return eyesClosed ? 'mouth_open_eyes_close' : 'mouth_open_eyes_open';
-  }
-  return eyesClosed ? 'mouth_close_eyes_close' : 'mouth_close_eyes_open';
 }
 
 /** Fallback SVG when image is unavailable */
@@ -200,6 +189,64 @@ function InochiKurageRig({
   );
 }
 
+function CustomLayeredAvatar({
+  mouthLevel,
+  isSpeaking,
+  eyesClosed,
+  avatarImageUrls,
+  onBaseError,
+}: {
+  mouthLevel: number;
+  isSpeaking: boolean;
+  eyesClosed: boolean;
+  avatarImageUrls?: AvatarImageUrls;
+  onBaseError: (src: string) => void;
+}) {
+  const mouthOpen = isSpeaking && mouthLevel >= 1;
+  const mouthWide = isSpeaking && mouthLevel >= 3;
+  const energy = Math.min(Math.max(mouthLevel / 4, 0), 1);
+  const baseSrc =
+    avatarImageUrls?.mouth_close_eyes_open || AVATAR_IMAGES.mouth_close_eyes_open;
+  const mouthSrc =
+    (mouthWide
+      ? avatarImageUrls?.mouth_open_eyes_close
+      : avatarImageUrls?.mouth_open_eyes_open) ||
+    avatarImageUrls?.mouth_open_eyes_open ||
+    AVATAR_IMAGES.mouth_open_eyes_open;
+  const eyeSrc = avatarImageUrls?.mouth_close_eyes_close || '';
+
+  return (
+    <div
+      className={`custom-layered-avatar ${isSpeaking ? 'is-speaking' : ''} ${
+        eyesClosed ? 'eyes-closed' : ''
+      }`}
+      style={{ '--avatar-mouth-energy': energy } as CSSProperties}
+      aria-label="Layered avatar with mouth-only lipsync"
+    >
+      <img
+        src={baseSrc}
+        alt="Avatar"
+        className="custom-avatar-layer custom-avatar-base"
+        onError={() => onBaseError(baseSrc)}
+      />
+      {eyesClosed && eyeSrc && (
+        <img
+          src={eyeSrc}
+          alt=""
+          className="custom-avatar-layer custom-avatar-eye-overlay"
+        />
+      )}
+      {mouthOpen && (
+        <img
+          src={mouthSrc}
+          alt=""
+          className="custom-avatar-layer custom-avatar-mouth-overlay"
+        />
+      )}
+    </div>
+  );
+}
+
 export function AvatarPanel({
   mouthLevel,
   isSpeaking,
@@ -207,16 +254,14 @@ export function AvatarPanel({
   avatarImageUrls,
 }: AvatarPanelProps) {
   const eyesClosed = useBlink();
-  const mouthOpen = isSpeaking && mouthLevel >= 1;
   const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
 
-  const imageKey = useMemo(
-    () => selectImageKey(mouthOpen, eyesClosed),
-    [mouthOpen, eyesClosed],
-  );
-  const imageSrc = avatarImageUrls?.[imageKey] || AVATAR_IMAGES[imageKey];
-  const showImage = Boolean(imageSrc) && failedImageSrc !== imageSrc;
+  const baseImageSrc =
+    avatarImageUrls?.mouth_close_eyes_open || AVATAR_IMAGES.mouth_close_eyes_open;
   const showInochiRig = isUsingCanonicalKurageAssets(avatarImageUrls);
+  const showCustomLayeredAvatar =
+    !showInochiRig && Boolean(baseImageSrc) && failedImageSrc !== baseImageSrc;
+  const mouthOpen = isSpeaking && mouthLevel >= 1;
 
   // Debug bar width (0-100%)
   const barWidth = Math.min((smoothedValue / 0.12) * 100, 100);
@@ -231,17 +276,16 @@ export function AvatarPanel({
             eyesClosed={eyesClosed}
           />
         )}
-        {!showInochiRig && showImage && (
-          <img
-            src={imageSrc}
-            alt="Avatar"
-            className="avatar-image"
-            onError={() => {
-              setFailedImageSrc(imageSrc);
-            }}
+        {showCustomLayeredAvatar && (
+          <CustomLayeredAvatar
+            mouthLevel={mouthLevel}
+            isSpeaking={isSpeaking}
+            eyesClosed={eyesClosed}
+            avatarImageUrls={avatarImageUrls}
+            onBaseError={setFailedImageSrc}
           />
         )}
-        {!showInochiRig && !showImage && (
+        {!showInochiRig && !showCustomLayeredAvatar && (
           <FallbackAvatar mouthOpen={mouthOpen} eyesClosed={eyesClosed} />
         )}
       </div>
@@ -268,16 +312,14 @@ export function AvatarBackground({
   avatarImageUrls,
 }: Omit<AvatarPanelProps, 'smoothedValue'>) {
   const eyesClosed = useBlink();
-  const mouthOpen = isSpeaking && mouthLevel >= 1;
   const [failedImageSrc, setFailedImageSrc] = useState<string | null>(null);
 
-  const imageKey = useMemo(
-    () => selectImageKey(mouthOpen, eyesClosed),
-    [mouthOpen, eyesClosed],
-  );
-  const imageSrc = avatarImageUrls?.[imageKey] || AVATAR_IMAGES[imageKey];
-  const showImage = Boolean(imageSrc) && failedImageSrc !== imageSrc;
+  const baseImageSrc =
+    avatarImageUrls?.mouth_close_eyes_open || AVATAR_IMAGES.mouth_close_eyes_open;
   const showInochiRig = isUsingCanonicalKurageAssets(avatarImageUrls);
+  const showCustomLayeredAvatar =
+    !showInochiRig && Boolean(baseImageSrc) && failedImageSrc !== baseImageSrc;
+  const mouthOpen = isSpeaking && mouthLevel >= 1;
 
   return (
     <div className="avatar-background">
@@ -289,17 +331,16 @@ export function AvatarBackground({
             eyesClosed={eyesClosed}
           />
         )}
-        {!showInochiRig && showImage && (
-          <img
-            src={imageSrc}
-            alt=""
-            className="avatar-image"
-            onError={() => {
-              setFailedImageSrc(imageSrc);
-            }}
+        {showCustomLayeredAvatar && (
+          <CustomLayeredAvatar
+            mouthLevel={mouthLevel}
+            isSpeaking={isSpeaking}
+            eyesClosed={eyesClosed}
+            avatarImageUrls={avatarImageUrls}
+            onBaseError={setFailedImageSrc}
           />
         )}
-        {!showInochiRig && !showImage && (
+        {!showInochiRig && !showCustomLayeredAvatar && (
           <FallbackAvatar mouthOpen={mouthOpen} eyesClosed={eyesClosed} />
         )}
       </div>

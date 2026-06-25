@@ -1466,6 +1466,44 @@ body:has(.broadcast-viewer-app),
   object-fit: contain;
 }
 
+.custom-layered-avatar {
+  --avatar-mouth-energy: 0;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 18px 22px rgba(75, 130, 175, 0.18));
+  animation: custom-avatar-breathe 5.4s ease-in-out infinite;
+}
+
+.custom-avatar-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+.custom-avatar-base {
+  position: relative;
+  z-index: 1;
+}
+
+.custom-avatar-eye-overlay {
+  z-index: 2;
+  clip-path: inset(26% 18% 48% 18%);
+  opacity: 0.92;
+}
+
+.custom-avatar-mouth-overlay {
+  z-index: 3;
+  clip-path: inset(45% 32% 28% 32%);
+  opacity: calc(0.78 + var(--avatar-mouth-energy) * 0.22);
+  transform-origin: 50% 58%;
+  transform: scaleY(calc(1 + var(--avatar-mouth-energy) * 0.08));
+}
+
 .inochi-kurage-rig {
   --kurage-energy: 0;
   position: relative;
@@ -1540,6 +1578,16 @@ body:has(.broadcast-viewer-app),
 .inochi-kurage-blink-right {
   left: 65.8%;
   top: 24.4%;
+}
+
+@keyframes custom-avatar-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-0.8%) scale(1.004);
+  }
 }
 
 @keyframes kurage-rig-breathe {
