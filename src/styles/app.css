@@ -1553,27 +1553,6 @@ body:has(.broadcast-viewer-app),
   filter: saturate(calc(1 + var(--kurage-energy) * 0.25));
 }
 
-.inochi-kurage-blink {
-  position: absolute;
-  width: 7.4%;
-  height: 1.1%;
-  border-radius: 999px;
-  background: #17356f;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.65);
-  opacity: 0.82;
-  transform: rotate(1deg);
-}
-
-.inochi-kurage-blink-left {
-  left: 45.2%;
-  top: 24.4%;
-}
-
-.inochi-kurage-blink-right {
-  left: 65.8%;
-  top: 24.4%;
-}
-
 @keyframes custom-avatar-breathe {
   0%,
   100% {

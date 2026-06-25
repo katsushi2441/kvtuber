@@ -133,11 +133,9 @@ function isUsingCanonicalKurageAssets(avatarImageUrls?: AvatarImageUrls) {
 function InochiKurageRig({
   mouthLevel,
   isSpeaking,
-  eyesClosed,
 }: {
   mouthLevel: number;
   isSpeaking: boolean;
-  eyesClosed: boolean;
 }) {
   const mouthOpen = isSpeaking && mouthLevel >= 1;
   const mouthWide = isSpeaking && mouthLevel >= 3;
@@ -145,9 +143,7 @@ function InochiKurageRig({
 
   return (
     <div
-      className={`inochi-kurage-rig ${isSpeaking ? 'is-speaking' : ''} ${
-        eyesClosed ? 'eyes-closed' : ''
-      }`}
+      className={`inochi-kurage-rig ${isSpeaking ? 'is-speaking' : ''}`}
       style={{ '--kurage-energy': energy } as CSSProperties}
       aria-label="Kurage Inochi2D-style layered rig avatar"
     >
@@ -183,8 +179,6 @@ function InochiKurageRig({
           alt=""
         />
       )}
-      {eyesClosed && <div className="inochi-kurage-blink inochi-kurage-blink-left" />}
-      {eyesClosed && <div className="inochi-kurage-blink inochi-kurage-blink-right" />}
     </div>
   );
 }
@@ -261,7 +255,6 @@ export function AvatarPanel({
           <InochiKurageRig
             mouthLevel={mouthLevel}
             isSpeaking={isSpeaking}
-            eyesClosed={eyesClosed}
           />
         )}
         {showCustomLayeredAvatar && (
@@ -315,7 +308,6 @@ export function AvatarBackground({
           <InochiKurageRig
             mouthLevel={mouthLevel}
             isSpeaking={isSpeaking}
-            eyesClosed={eyesClosed}
           />
         )}
         {showCustomLayeredAvatar && (
