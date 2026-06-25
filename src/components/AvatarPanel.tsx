@@ -17,16 +17,6 @@ const AVATAR_IMAGES = {
 export type AvatarImageKey = keyof typeof AVATAR_IMAGES;
 export type AvatarImageUrls = Partial<Record<AvatarImageKey, string>>;
 
-const INOCHI_LAYER_IMAGES = {
-  bell: '/avatar/inochi2d/kurage_layers/10_bell_body.png',
-  innerTentacles: '/avatar/inochi2d/kurage_layers/20_inner_tentacles.png',
-  leftTentacles: '/avatar/inochi2d/kurage_layers/30_left_tentacles.png',
-  rightTentacles: '/avatar/inochi2d/kurage_layers/40_right_tentacles.png',
-  mouthClosed: '/avatar/inochi2d/kurage_layers/50_mouth_closed.png',
-  mouthOpen: '/avatar/inochi2d/kurage_layers/51_mouth_open.png',
-  mouthWide: '/avatar/inochi2d/kurage_layers/52_mouth_wide.png',
-} as const;
-
 /** Hook for random blinking */
 function useBlink() {
   const [eyesClosed, setEyesClosed] = useState(false);
@@ -126,63 +116,6 @@ function FallbackAvatar({
   );
 }
 
-function isUsingCanonicalKurageAssets(avatarImageUrls?: AvatarImageUrls) {
-  return !avatarImageUrls || Object.keys(avatarImageUrls).length === 0;
-}
-
-function InochiKurageRig({
-  mouthLevel,
-  isSpeaking,
-}: {
-  mouthLevel: number;
-  isSpeaking: boolean;
-}) {
-  const mouthOpen = isSpeaking && mouthLevel >= 1;
-  const mouthWide = isSpeaking && mouthLevel >= 3;
-  const energy = Math.min(Math.max(mouthLevel / 4, 0), 1);
-
-  return (
-    <div
-      className={`inochi-kurage-rig ${isSpeaking ? 'is-speaking' : ''}`}
-      style={{ '--kurage-energy': energy } as CSSProperties}
-      aria-label="Kurage Inochi2D-style layered rig avatar"
-    >
-      <img
-        className="inochi-kurage-layer inochi-kurage-inner"
-        src={INOCHI_LAYER_IMAGES.innerTentacles}
-        alt=""
-      />
-      <img
-        className="inochi-kurage-layer inochi-kurage-left"
-        src={INOCHI_LAYER_IMAGES.leftTentacles}
-        alt=""
-      />
-      <img
-        className="inochi-kurage-layer inochi-kurage-right"
-        src={INOCHI_LAYER_IMAGES.rightTentacles}
-        alt=""
-      />
-      <img
-        className="inochi-kurage-layer inochi-kurage-bell"
-        src={INOCHI_LAYER_IMAGES.bell}
-        alt=""
-      />
-      <img
-        className="inochi-kurage-layer inochi-kurage-mouth"
-        src={INOCHI_LAYER_IMAGES.mouthClosed}
-        alt=""
-      />
-      {mouthOpen && (
-        <img
-          className="inochi-kurage-layer inochi-kurage-mouth inochi-kurage-mouth-open"
-          src={mouthWide ? INOCHI_LAYER_IMAGES.mouthWide : INOCHI_LAYER_IMAGES.mouthOpen}
-          alt=""
-        />
-      )}
-    </div>
-  );
-}
-
 function CustomLayeredAvatar({
   mouthLevel,
   isSpeaking,
@@ -229,9 +162,8 @@ export function AvatarPanel({
 
   const baseImageSrc =
     avatarImageUrls?.mouth_close_eyes_open || AVATAR_IMAGES.mouth_close_eyes_open;
-  const showInochiRig = isUsingCanonicalKurageAssets(avatarImageUrls);
   const showCustomLayeredAvatar =
-    !showInochiRig && Boolean(baseImageSrc) && failedImageSrc !== baseImageSrc;
+    Boolean(baseImageSrc) && failedImageSrc !== baseImageSrc;
   const mouthOpen = isSpeaking && mouthLevel >= 1;
 
   // Debug bar width (0-100%)
@@ -240,12 +172,6 @@ export function AvatarPanel({
   return (
     <div className="avatar-panel">
       <div className="avatar-container">
-        {showInochiRig && (
-          <InochiKurageRig
-            mouthLevel={mouthLevel}
-            isSpeaking={isSpeaking}
-          />
-        )}
         {showCustomLayeredAvatar && (
           <CustomLayeredAvatar
             mouthLevel={mouthLevel}
@@ -254,7 +180,7 @@ export function AvatarPanel({
             onBaseError={setFailedImageSrc}
           />
         )}
-        {!showInochiRig && !showCustomLayeredAvatar && (
+        {!showCustomLayeredAvatar && (
           <FallbackAvatar mouthOpen={mouthOpen} eyesClosed={eyesClosed} />
         )}
       </div>
@@ -285,20 +211,13 @@ export function AvatarBackground({
 
   const baseImageSrc =
     avatarImageUrls?.mouth_close_eyes_open || AVATAR_IMAGES.mouth_close_eyes_open;
-  const showInochiRig = isUsingCanonicalKurageAssets(avatarImageUrls);
   const showCustomLayeredAvatar =
-    !showInochiRig && Boolean(baseImageSrc) && failedImageSrc !== baseImageSrc;
+    Boolean(baseImageSrc) && failedImageSrc !== baseImageSrc;
   const mouthOpen = isSpeaking && mouthLevel >= 1;
 
   return (
     <div className="avatar-background">
       <div className="avatar-container">
-        {showInochiRig && (
-          <InochiKurageRig
-            mouthLevel={mouthLevel}
-            isSpeaking={isSpeaking}
-          />
-        )}
         {showCustomLayeredAvatar && (
           <CustomLayeredAvatar
             mouthLevel={mouthLevel}
@@ -307,7 +226,7 @@ export function AvatarBackground({
             onBaseError={setFailedImageSrc}
           />
         )}
-        {!showInochiRig && !showCustomLayeredAvatar && (
+        {!showCustomLayeredAvatar && (
           <FallbackAvatar mouthOpen={mouthOpen} eyesClosed={eyesClosed} />
         )}
       </div>
