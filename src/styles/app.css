@@ -1490,18 +1490,12 @@ body:has(.broadcast-viewer-app),
   z-index: 1;
 }
 
-.custom-avatar-eye-overlay {
-  z-index: 2;
-  clip-path: inset(26% 18% 48% 18%);
-  opacity: 0.92;
-}
-
 .custom-avatar-mouth-overlay {
   z-index: 3;
-  clip-path: inset(45% 32% 28% 32%);
-  opacity: calc(0.78 + var(--avatar-mouth-energy) * 0.22);
-  transform-origin: 50% 58%;
-  transform: scaleY(calc(1 + var(--avatar-mouth-energy) * 0.08));
+  clip-path: inset(49% 39% 36% 39%);
+  opacity: calc(0.72 + var(--avatar-mouth-energy) * 0.18);
+  transform-origin: 50% 56%;
+  transform: scaleY(calc(1 + var(--avatar-mouth-energy) * 0.04));
 }
 
 .inochi-kurage-rig {

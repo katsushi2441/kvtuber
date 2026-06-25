@@ -192,13 +192,11 @@ function InochiKurageRig({
 function CustomLayeredAvatar({
   mouthLevel,
   isSpeaking,
-  eyesClosed,
   avatarImageUrls,
   onBaseError,
 }: {
   mouthLevel: number;
   isSpeaking: boolean;
-  eyesClosed: boolean;
   avatarImageUrls?: AvatarImageUrls;
   onBaseError: (src: string) => void;
 }) {
@@ -213,13 +211,10 @@ function CustomLayeredAvatar({
       : avatarImageUrls?.mouth_open_eyes_open) ||
     avatarImageUrls?.mouth_open_eyes_open ||
     AVATAR_IMAGES.mouth_open_eyes_open;
-  const eyeSrc = avatarImageUrls?.mouth_close_eyes_close || '';
 
   return (
     <div
-      className={`custom-layered-avatar ${isSpeaking ? 'is-speaking' : ''} ${
-        eyesClosed ? 'eyes-closed' : ''
-      }`}
+      className={`custom-layered-avatar ${isSpeaking ? 'is-speaking' : ''}`}
       style={{ '--avatar-mouth-energy': energy } as CSSProperties}
       aria-label="Layered avatar with mouth-only lipsync"
     >
@@ -229,13 +224,6 @@ function CustomLayeredAvatar({
         className="custom-avatar-layer custom-avatar-base"
         onError={() => onBaseError(baseSrc)}
       />
-      {eyesClosed && eyeSrc && (
-        <img
-          src={eyeSrc}
-          alt=""
-          className="custom-avatar-layer custom-avatar-eye-overlay"
-        />
-      )}
       {mouthOpen && (
         <img
           src={mouthSrc}
@@ -280,7 +268,6 @@ export function AvatarPanel({
           <CustomLayeredAvatar
             mouthLevel={mouthLevel}
             isSpeaking={isSpeaking}
-            eyesClosed={eyesClosed}
             avatarImageUrls={avatarImageUrls}
             onBaseError={setFailedImageSrc}
           />
@@ -335,7 +322,6 @@ export function AvatarBackground({
           <CustomLayeredAvatar
             mouthLevel={mouthLevel}
             isSpeaking={isSpeaking}
-            eyesClosed={eyesClosed}
             avatarImageUrls={avatarImageUrls}
             onBaseError={setFailedImageSrc}
           />
