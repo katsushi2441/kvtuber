@@ -71,10 +71,10 @@
       "file": "50_mouth_closed.png",
       "source": "kurage_avatar_idle.png",
       "box": [
-        630,
-        260,
-        760,
-        330
+        520,
+        455,
+        700,
+        585
       ],
       "role": "mouth closed expression layer"
     },
@@ -82,10 +82,10 @@
       "file": "51_mouth_open.png",
       "source": "kurage_avatar_talk_open.png",
       "box": [
-        630,
-        260,
-        760,
-        330
+        520,
+        455,
+        700,
+        585
       ],
       "role": "mouth open expression layer driven by audio volume"
     },
@@ -93,10 +93,10 @@
       "file": "52_mouth_wide.png",
       "source": "kurage_avatar_talk_wide.png",
       "box": [
-        630,
-        260,
-        760,
-        330
+        520,
+        455,
+        700,
+        585
       ],
       "role": "wide mouth expression for higher audio volume"
     }

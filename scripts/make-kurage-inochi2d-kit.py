@@ -48,19 +48,19 @@ LAYERS = [
     {
         'name': '50_mouth_closed',
         'source': 'kurage_avatar_idle.png',
-        'box': (630, 260, 760, 330),
+        'box': (520, 455, 700, 585),
         'role': 'mouth closed expression layer',
     },
     {
         'name': '51_mouth_open',
         'source': 'kurage_avatar_talk_open.png',
-        'box': (630, 260, 760, 330),
+        'box': (520, 455, 700, 585),
         'role': 'mouth open expression layer driven by audio volume',
     },
     {
         'name': '52_mouth_wide',
         'source': 'kurage_avatar_talk_wide.png',
-        'box': (630, 260, 760, 330),
+        'box': (520, 455, 700, 585),
         'role': 'wide mouth expression for higher audio volume',
     },
 ]
