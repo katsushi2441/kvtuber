@@ -195,16 +195,9 @@ function CustomLayeredAvatar({
   onBaseError: (src: string) => void;
 }) {
   const mouthOpen = isSpeaking && mouthLevel >= 1;
-  const mouthWide = isSpeaking && mouthLevel >= 3;
   const energy = Math.min(Math.max(mouthLevel / 4, 0), 1);
   const baseSrc =
     avatarImageUrls?.mouth_close_eyes_open || AVATAR_IMAGES.mouth_close_eyes_open;
-  const mouthSrc =
-    (mouthWide
-      ? avatarImageUrls?.mouth_open_eyes_close
-      : avatarImageUrls?.mouth_open_eyes_open) ||
-    avatarImageUrls?.mouth_open_eyes_open ||
-    AVATAR_IMAGES.mouth_open_eyes_open;
 
   return (
     <div
@@ -219,11 +212,7 @@ function CustomLayeredAvatar({
         onError={() => onBaseError(baseSrc)}
       />
       {mouthOpen && (
-        <img
-          src={mouthSrc}
-          alt=""
-          className="custom-avatar-layer custom-avatar-mouth-overlay"
-        />
+        <div className="custom-avatar-mouth-overlay" aria-hidden="true" />
       )}
     </div>
   );
