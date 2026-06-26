@@ -1483,10 +1483,11 @@ body:has(.broadcast-viewer-app),
   user-select: none;
 }
 
-/* Lip-sync frames are stacked; only the active one is shown. All frames share
-   the same base image, so cross-fading them moves nothing but the mouth. */
+/* Lip-sync frames are stacked; only the active one is shown. Do not fade whole
+   PNG frames: mouth levels update rapidly and cross-fading makes the avatar
+   look like it is blinking/flickering. */
 .custom-avatar-frame {
-  transition: opacity 60ms linear;
+  transition: none;
 }
 
 .debug-panel {

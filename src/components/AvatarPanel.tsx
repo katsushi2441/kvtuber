@@ -171,6 +171,8 @@ function CustomLayeredAvatar({
           src={src}
           alt={i === 0 ? 'Avatar' : ''}
           aria-hidden={i !== 0}
+          loading="eager"
+          decoding="sync"
           className="custom-avatar-layer custom-avatar-frame"
           style={{ opacity: i === active ? 1 : 0 }}
           onError={i === 0 ? () => onBaseError(src) : undefined}
