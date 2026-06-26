@@ -1467,7 +1467,6 @@ body:has(.broadcast-viewer-app),
 }
 
 .custom-layered-avatar {
-  --avatar-mouth-energy: 0;
   position: relative;
   width: 100%;
   height: 100%;
@@ -1484,29 +1483,10 @@ body:has(.broadcast-viewer-app),
   user-select: none;
 }
 
-.custom-avatar-base {
-  position: relative;
-  z-index: 1;
-}
-
-.custom-avatar-mouth-overlay {
-  position: absolute;
-  z-index: 3;
-  left: 50%;
-  top: 50.5%;
-  width: 7.2%;
-  height: calc(1.2% + var(--avatar-mouth-energy) * 4.8%);
-  min-height: 3px;
-  border-radius: 999px;
-  background:
-    radial-gradient(ellipse at 50% 58%, rgba(255, 170, 178, 0.65) 0 28%, transparent 30%),
-    linear-gradient(180deg, #62191e 0%, #2a080b 100%);
-  box-shadow:
-    inset 0 1px 2px rgba(255, 255, 255, 0.22),
-    0 1px 2px rgba(42, 8, 11, 0.14);
-  opacity: calc(0.62 + var(--avatar-mouth-energy) * 0.24);
-  transform: translate(-50%, -50%);
-  transform-origin: 50% 50%;
+/* Lip-sync frames are stacked; only the active one is shown. All frames share
+   the same base image, so cross-fading them moves nothing but the mouth. */
+.custom-avatar-frame {
+  transition: opacity 60ms linear;
 }
 
 .debug-panel {

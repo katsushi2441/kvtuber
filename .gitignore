@@ -18,6 +18,10 @@ storage/
 !public/avatar/kurage_avatar_idle.png
 !public/avatar/kurage_avatar_talk_open.png
 !public/avatar/kurage_avatar_talk_wide.png
+!public/avatar/lipsync/
+!public/avatar/lipsync/*.png
+!public/avatar/generated/
+!public/avatar/generated/*.png
 coverage/
 
 # Local reference or upstream OSS checkouts used during development.

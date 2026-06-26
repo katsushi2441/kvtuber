@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface AvatarPanelProps {
   mouthLevel: number;
@@ -8,14 +8,28 @@ interface AvatarPanelProps {
 }
 
 const AVATAR_IMAGES = {
-  mouth_close_eyes_open: '/avatar/kurage_avatar_idle.png',
-  mouth_close_eyes_close: '/avatar/kurage_avatar_idle.png',
-  mouth_open_eyes_open: '/avatar/kurage_avatar_talk_open.png',
-  mouth_open_eyes_close: '/avatar/kurage_avatar_talk_wide.png',
+  mouth_close_eyes_open: '/avatar/lipsync/kurage_mouth_0.png',
+  mouth_close_eyes_close: '/avatar/lipsync/kurage_mouth_0.png',
+  mouth_open_eyes_open: '/avatar/lipsync/kurage_mouth_3.png',
+  mouth_open_eyes_close: '/avatar/lipsync/kurage_mouth_4.png',
 } as const;
 
 export type AvatarImageKey = keyof typeof AVATAR_IMAGES;
 export type AvatarImageUrls = Partial<Record<AvatarImageKey, string>>;
+
+/**
+ * Registration-stable lip-sync frames for the default Kurage avatar.
+ * All five frames are the SAME base image with only the mouth pixels redrawn
+ * (see scripts/make-kurage-lipsync.py), so swapping them changes nothing but
+ * the mouth — no head/body drift. Index = mouth openness 0 (closed) .. 4 (wide).
+ */
+const KURAGE_LIPSYNC_FRAMES = [
+  '/avatar/lipsync/kurage_mouth_0.png',
+  '/avatar/lipsync/kurage_mouth_1.png',
+  '/avatar/lipsync/kurage_mouth_2.png',
+  '/avatar/lipsync/kurage_mouth_3.png',
+  '/avatar/lipsync/kurage_mouth_4.png',
+] as const;
 
 /** Hook for random blinking */
 function useBlink() {
@@ -127,26 +141,41 @@ function CustomLayeredAvatar({
   avatarImageUrls?: AvatarImageUrls;
   onBaseError: (src: string) => void;
 }) {
-  const mouthOpen = isSpeaking && mouthLevel >= 1;
-  const energy = Math.min(Math.max(mouthLevel / 4, 0), 1);
-  const baseSrc =
-    avatarImageUrls?.mouth_close_eyes_open || AVATAR_IMAGES.mouth_close_eyes_open;
+  // A user-uploaded custom avatar: we can't know where its mouth is, so just
+  // swap their closed/open stills (no synthetic mouth overlay).
+  const customBase = avatarImageUrls?.mouth_close_eyes_open;
+  if (customBase) {
+    const customOpen = avatarImageUrls?.mouth_open_eyes_open || customBase;
+    const src = isSpeaking && mouthLevel >= 1 ? customOpen : customBase;
+    return (
+      <div className="custom-layered-avatar" aria-label="Avatar">
+        <img
+          src={src}
+          alt="Avatar"
+          className="custom-avatar-layer custom-avatar-frame"
+          onError={() => onBaseError(customBase)}
+        />
+      </div>
+    );
+  }
 
+  // Default Kurage avatar: render all lip-sync frames stacked and reveal only
+  // the active one. Because every frame shares the same base, the only visible
+  // change is the mouth — zero positional drift, and preloading avoids flicker.
+  const active = isSpeaking ? Math.min(Math.max(mouthLevel, 0), 4) : 0;
   return (
-    <div
-      className={`custom-layered-avatar ${isSpeaking ? 'is-speaking' : ''}`}
-      style={{ '--avatar-mouth-energy': energy } as CSSProperties}
-      aria-label="Layered avatar with mouth-only lipsync"
-    >
-      <img
-        src={baseSrc}
-        alt="Avatar"
-        className="custom-avatar-layer custom-avatar-base"
-        onError={() => onBaseError(baseSrc)}
-      />
-      {mouthOpen && (
-        <div className="custom-avatar-mouth-overlay" aria-hidden="true" />
-      )}
+    <div className="custom-layered-avatar" aria-label="Avatar with mouth-only lipsync">
+      {KURAGE_LIPSYNC_FRAMES.map((src, i) => (
+        <img
+          key={src}
+          src={src}
+          alt={i === 0 ? 'Avatar' : ''}
+          aria-hidden={i !== 0}
+          className="custom-avatar-layer custom-avatar-frame"
+          style={{ opacity: i === active ? 1 : 0 }}
+          onError={i === 0 ? () => onBaseError(src) : undefined}
+        />
+      ))}
     </div>
   );
 }
