@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "public" / "avatar" / "generated" / "bishoujo2_idle.png"
 OUT_DIR = ROOT / "public" / "avatar" / "lipsync"
 
-CX, CY = 637, 653      # mouth center (under the eyes' midpoint)
+CX, CY = 620, 653      # mouth center, directly under the nose (nose highlight x=620)
 PAD = 100
 SS = 6
 
@@ -77,11 +77,36 @@ def _draw(cleaned: Image.Image, width: int, height: int, tongue: bool) -> Image.
     return out
 
 
+def _draw_closed(cleaned: Image.Image) -> Image.Image:
+    """Gentle closed smile, centered at (CX, CY) so the resting frame is aligned
+    under the nose just like the open frames (no horizontal jump)."""
+    box = (CX - PAD, CY - PAD, CX + PAD, CY + PAD)
+    crop = cleaned.crop(box).resize((PAD * 2 * SS, PAD * 2 * SS), Image.LANCZOS).convert("RGBA")
+    d = ImageDraw.Draw(crop)
+    ox = oy = PAD * SS
+    w = 30 * SS
+    # upward-curving smile line drawn as tapering dots
+    n = 60
+    for i in range(n):
+        t = i / (n - 1)
+        x = ox + (t - 0.5) * 2 * w
+        y = oy + (abs(t - 0.5) ** 1.7) * 14 * SS - 3 * SS  # dip down in the middle, lift corners
+        r = max(2.6 * SS * (1 - abs(t - 0.5) * 1.5), 0.7 * SS)
+        d.ellipse((x - r, y - r, x + r, y + r), fill=(176, 104, 104, 255))
+    # soft lower-lip highlight
+    d.ellipse((ox - int(w * 0.5), oy + int(10 * SS), ox + int(w * 0.5), oy + int(18 * SS)),
+              fill=(247, 206, 206, 90))
+    small = crop.resize((PAD * 2, PAD * 2), Image.LANCZOS)
+    out = cleaned.copy()
+    out.paste(small, (box[0], box[1]), small)
+    return out
+
+
 def main() -> None:
     src = Image.open(BASE).convert("RGBA")
     cleaned = _clean_base(src)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    src.save(OUT_DIR / "kurage_mouth_0.png")  # closed = natural smile
+    _draw_closed(cleaned).save(OUT_DIR / "kurage_mouth_0.png")  # closed smile, re-centered
     for level, (w, h, tongue) in LEVELS.items():
         _draw(cleaned, w, h, tongue).save(OUT_DIR / f"kurage_mouth_{level}.png")
     print(f"wrote 5 frames to {OUT_DIR}")
