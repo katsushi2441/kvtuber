@@ -38,6 +38,19 @@ interface BroadcastProgram {
   teacherMode: boolean;
 }
 
+interface ViewerStatus {
+  phase: string;
+  label: string;
+  autonomousEnabled: boolean;
+  isProcessing?: boolean;
+  isSpeaking?: boolean;
+  currentTopic?: string;
+  nextRunAt?: number | null;
+  programTitle?: string;
+  commandClients?: number;
+  updatedAt: number;
+}
+
 interface BroadcastSchedule {
   enabled: boolean;
   items: BroadcastScheduleItem[];
@@ -509,6 +522,23 @@ function adminControlPlugin() {
     };
     latestProgramCommand = command;
     broadcast(command);
+    broadcastStatus({
+      phase: autoplay ? 'starting' : 'waiting',
+      label:
+        clients.size > 0
+          ? autoplay
+            ? '配信開始中'
+            : 'viewer待機中'
+          : 'viewer接続待ち',
+      autonomousEnabled: autoplay,
+      isProcessing: false,
+      isSpeaking: false,
+      currentTopic: '',
+      nextRunAt: null,
+      programTitle: program.title,
+      commandClients: clients.size,
+      updatedAt: Date.now(),
+    } satisfies ViewerStatus);
     return {
       clients: clients.size,
       program,

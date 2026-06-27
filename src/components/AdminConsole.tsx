@@ -15,6 +15,7 @@ type ViewerStatus = {
   topicCount?: number;
   turnCount?: number;
   audioUnlocked?: boolean;
+  commandClients?: number;
   updatedAt?: number;
 };
 
@@ -136,6 +137,10 @@ export function AdminConsole() {
   const topicProgress = viewerStatus.topicCount
     ? `${viewerStatus.topicIndex || 0}/${viewerStatus.topicCount}件`
     : '未開始';
+  const viewerConnectionLabel =
+    typeof viewerStatus.commandClients === 'number'
+      ? `viewer接続: ${viewerStatus.commandClients}件`
+      : '';
 
   const selectedProgramTopicCount = useMemo(
     () => (selectedProgram ? countTopics(selectedProgram) : 0),
@@ -450,6 +455,9 @@ export function AdminConsole() {
           {isLive ? '配信中' : '停止中'}
         </div>
         <div className="admin-state-pill">viewer: {viewerLabel}</div>
+        {viewerConnectionLabel && (
+          <div className="admin-state-pill">{viewerConnectionLabel}</div>
+        )}
         <div className="admin-state-pill">現在の番組: {activeProgramTitle}</div>
         <div className="admin-state-pill">進行: {topicProgress}</div>
       </section>
