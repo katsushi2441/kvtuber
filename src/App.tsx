@@ -15,6 +15,7 @@ import {
   findBroadcastProgram,
   type BroadcastProgram,
 } from './programs';
+import type { ChatMessage } from './types/chat';
 import type { TwitchChatMessage } from './services/twitch/twitchService';
 import type { YouTubeChatMessage } from './services/youtube/youtubeService';
 import './styles/app.css';
@@ -69,32 +70,6 @@ function parseTopics(topicsText: string): string[] {
     .filter(Boolean);
 }
 
-function buildAutonomousPrompt(
-  theme: string,
-  topic: string,
-  turnCount: number,
-  vibeCodingTeacherMode: boolean,
-) {
-  return [
-    'これは自律配信モードの内部プロンプトです。視聴者にはこの指示を見せず、あなたの自然な発話だけを返してください。',
-    `配信テーマ: ${theme || DEFAULT_AUTONOMOUS_THEME}`,
-    `今回の話題: ${topic}`,
-    `現在の自律発話ターン: ${turnCount + 1}`,
-    vibeCodingTeacherMode
-      ? 'あなたは「VTuberくらげ」という、バイブコーディングを教えるクラゲ型AI先生です。'
-      : 'あなたはKurage AI Navigatorというクラゲ型AITuberです。',
-    'ライブ配信中のように、明るく、短く、聞き取りやすい日本語で話してください。',
-    vibeCodingTeacherMode
-      ? '初心者に向けて、AIへの頼み方、作業の分け方、確認の仕方、失敗を防ぐレビュー方法が伝わるように話してください。見出しを読むだけにせず、講義として具体例を補ってください。'
-      : '経営者や開発者に、AI活用・動画生成・業務自動化を整理して伝えてください。',
-    vibeCodingTeacherMode
-      ? '35秒から50秒程度で話せる、中身のあるセミナー発話にしてください。'
-      : '20秒以内で話せる長さにしてください。',
-    '前置きとして「内部プロンプト」や「今回の話題」は言わないでください。',
-    '最後は軽くコメントや質問を促してください。ただし毎回同じ締め方にしないでください。',
-  ].join('\n');
-}
-
 function buildAdminSpeakPrompt(text: string, instruction: string) {
   return [
     'これは管理者からのリアルタイム指示です。視聴者にはこの指示文を見せず、自然な発話だけを返してください。',
@@ -104,6 +79,18 @@ function buildAdminSpeakPrompt(text: string, instruction: string) {
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+function buildBroadcastSpeechText(topic: string, turnCount: number) {
+  const normalized = topic
+    .replace(/^[^:：]{1,16}[:：]\s*/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const intro =
+    turnCount === 0
+      ? 'それでは始めます。'
+      : '続いて、次のポイントです。';
+  return `${intro}${normalized}`;
 }
 
 function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
@@ -129,9 +116,7 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
   const [activeProgramTitle, setActiveProgramTitle] = useState(
     initialProgram.title,
   );
-  const [autonomousEnabled, setAutonomousEnabled] = useState(
-    viewerOnly && !isBroadcastViewer,
-  );
+  const [autonomousEnabled, setAutonomousEnabled] = useState(false);
   const [autonomousTheme, setAutonomousTheme] = useState(initialProgram.theme);
   const [autonomousTopicsText, setAutonomousTopicsText] = useState(
     initialProgram.topicsText,
@@ -143,6 +128,8 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
   const [autonomousTurnCount, setAutonomousTurnCount] = useState(0);
   const [currentTopicLabel, setCurrentTopicLabel] = useState('');
   const [nextRunAt, setNextRunAt] = useState<number | null>(null);
+  const [broadcastMessages, setBroadcastMessages] = useState<ChatMessage[]>([]);
+  const [isBroadcastProcessing, setIsBroadcastProcessing] = useState(false);
   const backgroundObjectUrlRef = useRef<string | null>(null);
   const avatarObjectUrlRef = useRef<AvatarImageUrls>({});
   const handleControlCommandRef = useRef<(command: AdminControlCommand) => void>(
@@ -181,9 +168,13 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
         ? VIBE_CODING_SYSTEM_PROMPT
         : DEFAULT_SYSTEM_PROMPT,
     });
-  const visibleMessages = isBroadcastViewer ? messages.slice(-1) : messages;
+  const allMessages = useMemo(
+    () => [...messages, ...broadcastMessages],
+    [messages, broadcastMessages],
+  );
+  const visibleMessages = isBroadcastViewer ? allMessages.slice(-1) : allMessages;
   const visiblePartialResponse = partialResponse;
-  const effectiveProcessing = isProcessing;
+  const effectiveProcessing = isProcessing || isBroadcastProcessing;
 
   const handleSend = useCallback(
     (text: string) => {
@@ -299,26 +290,49 @@ function LiveApp({ viewerOnly = false }: { viewerOnly?: boolean }) {
 
     setCurrentTopicLabel(nextAutonomousTopic);
     setNextRunAt(null);
-
-    // Broadcast seminars must be expanded by the LLM, not read as raw topic text.
-    const prompt = buildAutonomousPrompt(
-      autonomousTheme,
+    const speechText = buildBroadcastSpeechText(
       nextAutonomousTopic,
       autonomousTurnCount,
-      vibeCodingTeacherMode,
     );
+    const message: ChatMessage = {
+      id: `broadcast-${Date.now()}-${autonomousTurnCount}`,
+      role: 'assistant',
+      content: speechText,
+      timestamp: Date.now(),
+    };
 
-    processChat(prompt, { displayUserMessage: false });
+    setBroadcastMessages((current) => [...current, message]);
+    setIsBroadcastProcessing(true);
+    void fetch('/kurage-tts/v1/audio/speech', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'kurage-edge-tts',
+        voice: 'ja-JP-NanamiNeural',
+        input: speechText,
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Kurage TTS HTTP ${response.status}`);
+        }
+        return response.arrayBuffer();
+      })
+      .then(handleAudioPlay)
+      .catch((error) => {
+        console.error('Broadcast speech failed:', error);
+      })
+      .finally(() => {
+        setIsBroadcastProcessing(false);
+      });
     setAutonomousTopicIndex((index) => index + 1);
     setAutonomousTurnCount((count) => count + 1);
   }, [
-    autonomousTheme,
     autonomousTurnCount,
     effectiveProcessing,
+    handleAudioPlay,
     isSpeaking,
     nextAutonomousTopic,
-    processChat,
-    vibeCodingTeacherMode,
   ]);
 
   const handleVibeCodingTeacherModeChange = useCallback((enabled: boolean) => {

@@ -67,6 +67,7 @@ export function useAudioLipsync() {
       if (ctx.state === 'suspended') {
         await ctx.resume();
       }
+      setIsAudioUnlocked(ctx.state === 'running');
 
       // Decode audio data
       const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
