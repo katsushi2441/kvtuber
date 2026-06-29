@@ -1041,11 +1041,11 @@ export default defineConfig({
     },
     proxy: {
       '/ollama': {
-        target: 'http://127.0.0.1:11434',
+        target: 'http://192.168.0.14:11434',
         changeOrigin: true,
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => {
-            proxyReq.setHeader('origin', 'http://127.0.0.1:11434');
+            proxyReq.setHeader('origin', 'http://192.168.0.14:11434');
           });
         },
         rewrite: (path) => path.replace(/^\/ollama/, ''),

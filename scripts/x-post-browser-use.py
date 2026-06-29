@@ -26,7 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--profile", default=os.environ.get("BROWSER_USE_CHROME_PROFILE", DEFAULT_PROFILE))
     parser.add_argument("--cdp-url", default=os.environ.get("BROWSER_USE_CDP_URL", ""))
     parser.add_argument("--model", default=os.environ.get("BROWSER_USE_MODEL", "gemma4:12b-it-qat"))
-    parser.add_argument("--host", default=os.environ.get("BROWSER_USE_OLLAMA_HOST", "http://127.0.0.1:11434"))
+    parser.add_argument("--host", default=os.environ.get("BROWSER_USE_OLLAMA_HOST", "http://192.168.0.14:11434"))
     parser.add_argument("--steps", type=int, default=int(os.environ.get("BROWSER_USE_X_STEPS", "12")))
     parser.add_argument("--headful", action="store_true", help="Show the browser window; requires DISPLAY/VNC")
     return parser.parse_args()
