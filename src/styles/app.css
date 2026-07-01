@@ -2636,7 +2636,7 @@ body {
 }
 
 .inochi-breath-rig {
-  animation: inochiBreath 4.8s ease-in-out infinite;
+  animation: inochiBreath 5.2s ease-in-out infinite;
   height: 100%;
   position: relative;
   transform-origin: 50% 62%;
@@ -2702,7 +2702,7 @@ body {
 
 @keyframes inochiBreath {
   0%, 100% { transform: translateY(0) scaleX(1) scaleY(1); }
-  50% { transform: translateY(-1.8%) scaleX(1.012) scaleY(0.992); }
+  50% { transform: translateY(-3%) scaleX(1.016) scaleY(1.03); }
 }
 
 @keyframes inochiBodySway {
