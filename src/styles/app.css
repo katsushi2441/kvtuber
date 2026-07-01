@@ -2513,3 +2513,284 @@ body {
     max-width: calc(100% - 150px);
   }
 }
+
+/* ── Inochi2D-style Kurage avatar motion sample ── */
+.inochi-sample-page {
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(116, 224, 232, 0.32), transparent 28%),
+    radial-gradient(circle at 86% 14%, rgba(255, 215, 230, 0.34), transparent 24%),
+    linear-gradient(180deg, #fbfdff 0%, #eefaff 58%, #fff8fb 100%);
+  color: #17313a;
+  padding: 22px clamp(14px, 3vw, 42px) 30px;
+}
+
+.inochi-sample-hero {
+  align-items: flex-end;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin: 0 auto 18px;
+  max-width: 1120px;
+}
+
+.inochi-kicker {
+  color: #078aa6;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+}
+
+.inochi-sample-hero h1 {
+  color: #102a35;
+  font-size: clamp(2rem, 5vw, 4.8rem);
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+  margin-bottom: 10px;
+}
+
+.inochi-sample-hero p {
+  color: #45636d;
+  font-size: clamp(0.95rem, 1.7vw, 1.08rem);
+  line-height: 1.7;
+  max-width: 720px;
+}
+
+.inochi-back-link {
+  background: #ffffff;
+  border: 1px solid rgba(7, 138, 166, 0.22);
+  border-radius: 999px;
+  box-shadow: 0 14px 36px rgba(7, 138, 166, 0.12);
+  color: #078aa6;
+  flex: 0 0 auto;
+  font-weight: 900;
+  padding: 11px 16px;
+  text-decoration: none;
+}
+
+.inochi-sample-stage {
+  align-items: stretch;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  margin: 0 auto;
+  max-width: 1120px;
+}
+
+.inochi-avatar-card,
+.inochi-motion-panel {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(7, 138, 166, 0.16);
+  border-radius: 30px;
+  box-shadow: 0 28px 72px rgba(44, 139, 164, 0.14);
+  position: relative;
+}
+
+.inochi-avatar-card {
+  display: grid;
+  min-height: min(68vh, 700px);
+  overflow: hidden;
+  place-items: center;
+}
+
+.inochi-avatar-card::before {
+  background:
+    linear-gradient(rgba(7, 138, 166, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(7, 138, 166, 0.045) 1px, transparent 1px);
+  background-size: 42px 42px;
+  content: "";
+  inset: 0;
+  mask-image: radial-gradient(circle at 50% 44%, #000 0%, transparent 70%);
+  pointer-events: none;
+  position: absolute;
+}
+
+.inochi-avatar-card::after {
+  background: radial-gradient(ellipse at center, rgba(7, 138, 166, 0.14), transparent 64%);
+  border-radius: 50%;
+  bottom: 5%;
+  content: "";
+  height: 11%;
+  left: 24%;
+  position: absolute;
+  right: 24%;
+}
+
+.inochi-avatar-wrap {
+  height: min(62vh, 620px);
+  position: relative;
+  width: min(38vw, 430px);
+  z-index: 1;
+}
+
+.inochi-breath-rig {
+  animation: inochiBreath 4.8s ease-in-out infinite;
+  height: 100%;
+  position: relative;
+  transform-origin: 50% 62%;
+  width: 100%;
+}
+
+.inochi-mouth-frame,
+.inochi-sway-layer {
+  height: 100%;
+  inset: 0;
+  object-fit: contain;
+  object-position: center top;
+  pointer-events: none;
+  position: absolute;
+  user-select: none;
+  width: 100%;
+}
+
+.inochi-mouth-frame {
+  filter: drop-shadow(0 24px 34px rgba(43, 128, 164, 0.22));
+  transition: none;
+}
+
+.inochi-sway-layer {
+  opacity: 0.34;
+  transform-origin: 50% 40%;
+}
+
+.inochi-sway-cap {
+  animation: inochiCapSway 3.8s ease-in-out infinite;
+  clip-path: inset(0 0 58% 0);
+  filter: blur(0.2px) saturate(1.08);
+}
+
+.inochi-sway-hair-left {
+  animation: inochiHairLeft 4.4s ease-in-out infinite;
+  clip-path: polygon(0 22%, 48% 22%, 48% 100%, 0 100%);
+  transform-origin: 44% 33%;
+}
+
+.inochi-sway-hair-right {
+  animation: inochiHairRight 4.1s ease-in-out infinite;
+  clip-path: polygon(52% 22%, 100% 22%, 100% 100%, 52% 100%);
+  transform-origin: 56% 33%;
+}
+
+.inochi-blink-layer {
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 42ms linear;
+}
+
+.inochi-blink-layer.is-blinking {
+  opacity: 1;
+}
+
+.inochi-eye-line {
+  background: linear-gradient(90deg, transparent, #183a50 18%, #183a50 82%, transparent);
+  border-radius: 999px;
+  box-shadow: 0 2px 0 rgba(255, 255, 255, 0.75);
+  height: 1.4%;
+  position: absolute;
+  top: 36.2%;
+  width: 10.5%;
+}
+
+.inochi-eye-left {
+  left: 39.7%;
+  transform: rotate(4deg);
+}
+
+.inochi-eye-right {
+  right: 37.7%;
+  transform: rotate(-4deg);
+}
+
+.inochi-motion-panel {
+  padding: 22px;
+}
+
+.inochi-motion-panel h2 {
+  color: #102a35;
+  font-size: 1.35rem;
+  margin-bottom: 16px;
+}
+
+.inochi-motion-panel ul {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+}
+
+.inochi-motion-panel li {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(241, 253, 255, 0.96), rgba(255, 249, 252, 0.96));
+  border: 1px solid rgba(7, 138, 166, 0.13);
+  border-radius: 16px;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.inochi-motion-panel span {
+  color: #45636d;
+  font-weight: 800;
+}
+
+.inochi-motion-panel strong {
+  color: #078aa6;
+  font-size: 0.86rem;
+}
+
+.inochi-motion-panel p {
+  color: #526f78;
+  font-size: 0.92rem;
+  line-height: 1.75;
+}
+
+@keyframes inochiBreath {
+  0%, 100% { transform: translateY(0) scaleX(1) scaleY(1); }
+  50% { transform: translateY(-1.8%) scaleX(1.012) scaleY(0.992); }
+}
+
+@keyframes inochiCapSway {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  50% { transform: translateX(0.7%) rotate(0.7deg); }
+}
+
+@keyframes inochiHairLeft {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  50% { transform: translateX(-1.8%) rotate(-1.6deg); }
+}
+
+@keyframes inochiHairRight {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  50% { transform: translateX(1.8%) rotate(1.6deg); }
+}
+
+@media (max-width: 860px) {
+  .inochi-sample-page {
+    overflow: auto;
+  }
+
+  .inochi-sample-hero,
+  .inochi-sample-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .inochi-sample-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .inochi-avatar-card {
+    min-height: 620px;
+  }
+
+  .inochi-avatar-wrap {
+    height: 540px;
+    width: min(78vw, 360px);
+  }
+}
