@@ -8,8 +8,6 @@ const FRAMES = [
   '/avatar/lipsync/kurage_mouth_4.png',
 ] as const;
 
-const EYES_CLOSED = '/avatar/lipsync/kurage_eyes_closed.png';
-
 function useAutoMouth() {
   const [level, setLevel] = useState(0);
 
@@ -26,38 +24,8 @@ function useAutoMouth() {
   return level;
 }
 
-/** Random natural blink: eyes closed for ~120ms every 2-6s. */
-function useBlink() {
-  const [closed, setClosed] = useState(false);
-
-  useEffect(() => {
-    let blinkTimer: ReturnType<typeof setTimeout>;
-    let openTimer: ReturnType<typeof setTimeout>;
-    const schedule = () => {
-      blinkTimer = setTimeout(
-        () => {
-          setClosed(true);
-          openTimer = setTimeout(() => {
-            setClosed(false);
-            schedule();
-          }, 110 + Math.random() * 60);
-        },
-        2200 + Math.random() * 3800,
-      );
-    };
-    schedule();
-    return () => {
-      clearTimeout(blinkTimer);
-      clearTimeout(openTimer);
-    };
-  }, []);
-
-  return closed;
-}
-
 export function Inochi2dSample() {
   const mouthLevel = useAutoMouth();
-  const eyesClosed = useBlink();
   const frameLabels = useMemo(
     () => ['closed', 'small', 'medium', 'open', 'wide'],
     [],
@@ -96,15 +64,6 @@ export function Inochi2dSample() {
                     decoding="sync"
                   />
                 ))}
-                <img
-                  className="inochi-blink-layer"
-                  src={EYES_CLOSED}
-                  alt=""
-                  aria-hidden="true"
-                  style={{ opacity: eyesClosed ? 1 : 0 }}
-                  loading="eager"
-                  decoding="sync"
-                />
               </div>
             </div>
           </div>
@@ -114,14 +73,13 @@ export function Inochi2dSample() {
           <h2>Motion channels</h2>
           <ul>
             <li><span>口パク</span><strong>{mouthLevel}/4 {frameLabels[mouthLevel]}</strong></li>
-            <li><span>まばたき</span><strong>{eyesClosed ? 'closed' : 'open'}</strong></li>
             <li><span>呼吸</span><strong>slow Y + scale</strong></li>
             <li><span>髪・クラゲ傘</span><strong>gentle sway</strong></li>
           </ul>
           <p>
             このサンプルはまだ本物のInochi2D `.inp` ではありません。Inochi Creatorでパーツ分けとメッシュを作る前に、
-            Kurageで欲しい動きの強さを確認するためのランタイム試作です。まばたきは目閉じ専用の差分画像
-            （kurage_eyes_closed.png）を目の領域だけに重ねて実現しており、口パク・呼吸・ゆれと同時に動きます。
+            Kurageで欲しい動きの強さを確認するためのランタイム試作です。口パク・呼吸・ゆれのみを扱い、
+            まばたきは自然な閉じ目にするには専用の作画パーツが要るため、本物のInochi2Dリグ化時に追加します。
           </p>
         </aside>
       </section>

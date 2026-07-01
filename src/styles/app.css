@@ -2643,8 +2643,7 @@ body {
   width: 100%;
 }
 
-.inochi-mouth-frame,
-.inochi-blink-layer {
+.inochi-mouth-frame {
   height: 100%;
   inset: 0;
   object-fit: contain;
@@ -2653,20 +2652,8 @@ body {
   position: absolute;
   user-select: none;
   width: 100%;
-}
-
-.inochi-mouth-frame {
   filter: drop-shadow(0 24px 34px rgba(43, 128, 164, 0.22));
   transition: none;
-}
-
-/* Blink overlay: only the eye band is revealed. Outside the eyes the closed
-   frame is pixel-identical to the base, so the clip edge is seamless and the
-   mouth (lip-sync) underneath stays visible while blinking. */
-.inochi-blink-layer {
-  clip-path: inset(0 0 66% 0);
-  z-index: 5;
-  transition: opacity 45ms linear;
 }
 
 .inochi-motion-panel {
