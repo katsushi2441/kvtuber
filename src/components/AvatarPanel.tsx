@@ -164,20 +164,24 @@ function CustomLayeredAvatar({
   // change is the mouth — zero positional drift, and preloading avoids flicker.
   const active = isSpeaking ? Math.min(Math.max(mouthLevel, 0), 4) : 0;
   return (
-    <div className="custom-layered-avatar" aria-label="Avatar with mouth-only lipsync">
-      {KURAGE_LIPSYNC_FRAMES.map((src, i) => (
-        <img
-          key={src}
-          src={src}
-          alt={i === 0 ? 'Avatar' : ''}
-          aria-hidden={i !== 0}
-          loading="eager"
-          decoding="sync"
-          className="custom-avatar-layer custom-avatar-frame"
-          style={{ opacity: i === active ? 1 : 0 }}
-          onError={i === 0 ? () => onBaseError(src) : undefined}
-        />
-      ))}
+    <div className="custom-layered-avatar custom-layered-avatar-motion" aria-label="Avatar with mouth-only lipsync motion">
+      <div className="custom-avatar-sway-rig">
+        <div className="custom-avatar-breath-rig">
+          {KURAGE_LIPSYNC_FRAMES.map((src, i) => (
+            <img
+              key={src}
+              src={src}
+              alt={i === 0 ? 'Avatar' : ''}
+              aria-hidden={i !== 0}
+              loading="eager"
+              decoding="sync"
+              className="custom-avatar-layer custom-avatar-frame"
+              style={{ opacity: i === active ? 1 : 0 }}
+              onError={i === 0 ? () => onBaseError(src) : undefined}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
