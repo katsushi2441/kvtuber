@@ -23,6 +23,8 @@ storage/
 !public/avatar/generated/
 !public/avatar/generated/*.png
 coverage/
+__pycache__/
+*/__pycache__/
 
 # Local reference or upstream OSS checkouts used during development.
 Open-LLM-VTuber/
