@@ -30,8 +30,13 @@ __pycache__/
 Open-LLM-VTuber/
 aituber-onair/
 kurage-aituber-onair/
+vendor/
+
+# Generated AGPL model and local Blender sources stay outside the MIT repo.
+public/avatar3d/generated/
 
 # Local private assets and generated captures.
 assets/
 recordings/
 outputs/
+output/

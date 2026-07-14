@@ -2755,3 +2755,144 @@ body {
     width: min(78vw, 360px);
   }
 }
+
+/* ── Headless 3D avatar verification studio ── */
+.avatar3d-page {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(64, 208, 226, 0.18), transparent 26rem),
+    linear-gradient(145deg, #f7ffff 0%, #eef9fb 52%, #fffaf4 100%);
+  color: #12323b;
+  min-height: 100vh;
+  padding: clamp(18px, 3vw, 42px);
+}
+
+.avatar3d-header,
+.avatar3d-stage-card {
+  margin: 0 auto;
+  max-width: 1180px;
+}
+
+.avatar3d-header {
+  align-items: end;
+  display: grid;
+  gap: 26px;
+  grid-template-columns: minmax(180px, 0.36fr) minmax(0, 1fr);
+  margin-bottom: 22px;
+}
+
+.avatar3d-brand {
+  color: #087e97;
+  font: 800 clamp(1rem, 2vw, 1.3rem)/1.2 "Avenir Next", "Noto Sans JP", sans-serif;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+.avatar3d-kicker {
+  color: #0794ad;
+  font: 800 0.72rem/1.2 "Avenir Next", "Noto Sans JP", sans-serif;
+  letter-spacing: 0.22em;
+  margin: 0 0 7px;
+}
+
+.avatar3d-header h1 {
+  font: 800 clamp(1.65rem, 3.6vw, 3.2rem)/1.14 "Avenir Next", "Noto Sans JP", sans-serif;
+  letter-spacing: -0.045em;
+  margin: 0;
+}
+
+.avatar3d-header p:last-child {
+  color: #55737c;
+  line-height: 1.75;
+  margin: 10px 0 0;
+}
+
+.avatar3d-stage-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(24, 149, 174, 0.2);
+  border-radius: 30px;
+  box-shadow: 0 24px 70px rgba(20, 91, 106, 0.14);
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(270px, 0.62fr);
+  min-height: min(720px, calc(100vh - 190px));
+  overflow: hidden;
+}
+
+.avatar3d-canvas {
+  background: linear-gradient(180deg, #fbffff 0%, #eaf8fa 100%);
+  min-height: 620px;
+  position: relative;
+}
+
+.avatar3d-canvas canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.avatar3d-info {
+  align-self: center;
+  padding: clamp(24px, 4vw, 48px);
+}
+
+.avatar3d-status {
+  background: #e6f9fb;
+  border: 1px solid #a6e4ec;
+  border-radius: 999px;
+  color: #087e97;
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 7px 12px;
+}
+
+.avatar3d-info dl {
+  display: grid;
+  gap: 0;
+  margin: 28px 0;
+}
+
+.avatar3d-info dl div {
+  border-bottom: 1px solid #d8eaed;
+  padding: 13px 0;
+}
+
+.avatar3d-info dt {
+  color: #6c858c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.avatar3d-info dd {
+  color: #163c47;
+  font-weight: 800;
+  margin: 4px 0 0;
+}
+
+.avatar3d-note,
+.avatar3d-error {
+  font-size: 0.86rem;
+  line-height: 1.75;
+}
+
+.avatar3d-note { color: #607b83; }
+.avatar3d-error { color: #b43c32; }
+
+@media (max-width: 760px) {
+  .avatar3d-header,
+  .avatar3d-stage-card {
+    grid-template-columns: 1fr;
+  }
+
+  .avatar3d-header {
+    align-items: start;
+  }
+
+  .avatar3d-stage-card {
+    min-height: 0;
+  }
+
+  .avatar3d-canvas {
+    min-height: 58vh;
+  }
+}

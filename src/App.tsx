@@ -5,6 +5,7 @@ import { AutonomousBroadcastPanel } from './components/AutonomousBroadcastPanel'
 import { ChatPanel } from './components/ChatPanel';
 import { KvtuberChatPage } from './components/KvtuberChatPage';
 import { Inochi2dSample } from './components/Inochi2dSample';
+import { Avatar3dSample } from './components/Avatar3dSample';
 import { SettingsPanel } from './components/SettingsPanel';
 import { useAudioLipsync } from './hooks/useAudioLipsync';
 import { useAituberCore } from './hooks/useAituberCore';
@@ -762,6 +763,9 @@ export default function App() {
   }
   if (path === '/inochi2d-sample') {
     return <Inochi2dSample />;
+  }
+  if (path === '/avatar3d-sample') {
+    return <Avatar3dSample />;
   }
   return <LiveApp viewerOnly={path !== '/studio'} />;
 }

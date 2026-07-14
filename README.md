@@ -219,3 +219,36 @@ python3 scripts/make-kurage-inochi2d-kit.py
 ```
 
 Manual Inochi Creator work is still required for a real `.inp` puppet: mesh creation, deformation parameters, physics, and export.
+
+## Headless 3D Avatar Pipeline
+
+The `/avatar3d-sample` route verifies a real GLB avatar generated without GUI
+operation. The pipeline uses MB-Lab's anime female base through Blender Python,
+adds Kurage-specific hair and clothing procedurally, and exports a skinned GLB
+with facial morph targets for mouth movement and blinking.
+
+```bash
+npm run avatar3d:setup
+npm run avatar3d:build
+npm run dev -- --host 0.0.0.0 --port 18308
+# http://localhost:18308/avatar3d-sample
+```
+
+`avatar3d:build` does not trust Blender's exit code by itself. It verifies the
+GLB header, armature skin, mouth morph, left/right blink morphs, preview image,
+and Blender source before reporting success.
+
+Hamr 0.8.0 was evaluated first because its YAML/CLI design is a strong fit for
+agent operation. It did not pass the production test with Blender 4.2 and VRM
+Add-on 4.4.0: the upstream build currently has Blender path propagation, hair
+shader, weight-paint, and VRM property API compatibility failures. Hamr remains
+an ignored local reference under `vendor/hamr`; the verified path calls MB-Lab
+directly instead of reporting Hamr's partial build as complete.
+
+### 3D Asset License Boundary
+
+MB-Lab code and its generated 3D models are AGPL-3.0. Generated GLB/Blend files
+therefore live in ignored `public/avatar3d/generated/` and are not mixed into
+this MIT repository. MB-Lab's license separately permits commercial 2D renders
+and videos made from those models. See `public/avatar3d/README.md` before
+distributing a generated 3D model itself.

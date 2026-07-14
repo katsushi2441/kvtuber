@@ -12,18 +12,23 @@
     "youtube-live": "node scripts/youtube-live-rtmp.mjs",
     "youtube-live:shorts": "node scripts/youtube-live-kurage-shorts.mjs",
     "youtube-live:shorts-watch": "node scripts/watch-kurage-shorts-live.mjs",
-    "youtube-shorts:upload-watch": "node scripts/watch-kurage-shorts-upload.mjs"
+    "youtube-shorts:upload-watch": "node scripts/watch-kurage-shorts-upload.mjs",
+    "avatar3d:setup": "bash scripts/setup-avatar3d.sh",
+    "avatar3d:build": "bash scripts/build-avatar3d.sh",
+    "avatar3d:validate": "python3 scripts/validate-3d-avatar.py public/avatar3d/generated"
   },
   "dependencies": {
     "@aituber-onair/core": "^0.26.3",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "three": "^0.151.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.151.0",
     "@vitejs/plugin-react": "^5.1.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
