@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kurage OSS 3D Model</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script>
+    <style>
+      :root {
+        color: #14364a;
+        background: #effbff;
+        font-family: "Avenir Next", "Hiragino Kaku Gothic ProN", sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; }
+      main {
+        min-height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        padding: clamp(18px, 4vw, 44px);
+        background:
+          radial-gradient(circle at 18% 12%, #fff 0 8%, transparent 32%),
+          linear-gradient(145deg, #faffff, #dff6ff 58%, #cdeeff);
+      }
+
+      h1 { margin: 0; font-size: clamp(24px, 4vw, 46px); letter-spacing: .03em; }
+      p { margin: 8px 0 0; color: #4e7182; }
+      model-viewer {
+        width: 100%;
+        height: min(76vh, 820px);
+        border-radius: 28px;
+        background: rgba(255, 255, 255, .62);
+        box-shadow: 0 24px 70px rgba(27, 112, 151, .14);
+        --poster-color: transparent;
+      }
+
+      footer { text-align: center; color: #5f8394; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Kurage OSS 3D Model</h1>
+        <p>Hunyuan3D-2mv + Hunyuan3D-Paint / drag to rotate</p>
+      </header>
+      <model-viewer
+        src="./kurage-hunyuan3d-mv-textured.glb"
+        alt="Kurage character generated as a textured 3D model"
+        camera-controls
+        auto-rotate
+        rotation-per-second="18deg"
+        shadow-intensity="0.7"
+        exposure="1.05"
+        environment-image="neutral"
+      ></model-viewer>
+      <footer>Generated locally from the character sheet with open-source software.</footer>
+    </main>
+  </body>
+</html>
