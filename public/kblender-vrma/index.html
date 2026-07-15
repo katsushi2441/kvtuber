@@ -199,7 +199,7 @@ function attachAnimeKurageStyle(vrm) {
 }
 
 async function loadVRM() {
-  const outfitTexture = await new THREE.TextureLoader().loadAsync('./textures/kurage-outfit-ernie-a.png');
+  const outfitTexture = await new THREE.TextureLoader().loadAsync('./textures/kurage-outfit-ernie-a.png?v=20260715-ernie-a');
   outfitTexture.colorSpace = THREE.SRGBColorSpace;
   outfitTexture.flipY = false;
   const gltf = await loader.loadAsync('./models/kurage-vrm-base.vrm');
