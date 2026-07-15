@@ -8,12 +8,12 @@ Current v0 direction:
 
 - Real VRM humanoid base, not Hunyuan GLB skinning.
 - Real `.vrma` playback on VRM bones through `@pixiv/three-vrm-animation`.
-- Silver/white hair, green eye impression, bright white/cyan outfit direction.
+- Silver/white hair, green eye impression, cyan futuristic outfit direction.
 - Small orange hair clips inspired by the anime reference.
 
 Files:
 
-- `models/kurage-vrm-base.vrm`: VRoid Studio sample model copied from the local kblender asset pack (`AvatarSample_G.vrm`).
+- `models/kurage-vrm-base.vrm`: VRoid Studio sample model copied from the local kblender asset pack (`AvatarSample_F.vrm`).
 - `motions/*.vrma`: generated with `/home/kojima/work/kblender/scripts/generate_kurage_vrma_preview_motions.mjs` using `vendor/text-to-vrma/src/vrmaBuilder.js`.
 
 Reference for the VRoid sample model pack:
