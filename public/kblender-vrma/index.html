@@ -123,12 +123,18 @@ function applyAnimeKurageMaterials(root) {
       if (name.includes('onepice_01_cloth')) {
         if (m.map) m.map = null;
         if (m.color) m.color.set(0xa8dbde);
+        if ('outlineWidthMode' in m) m.outlineWidthMode = 'none';
+        if ('outlineWidthFactor' in m) m.outlineWidthFactor = 0;
+        if ('outlineColorFactor' in m) m.outlineColorFactor.set(0xa8dbde);
         if ('roughness' in m) m.roughness = 0.46;
         if ('metalness' in m) m.metalness = 0;
       }
       if (name.includes('shoes_01_cloth')) {
         if (m.map) m.map = null;
         if (m.color) m.color.set(0x8fcfd4);
+        if ('outlineWidthMode' in m) m.outlineWidthMode = 'none';
+        if ('outlineWidthFactor' in m) m.outlineWidthFactor = 0;
+        if ('outlineColorFactor' in m) m.outlineColorFactor.set(0x8fcfd4);
         if ('roughness' in m) m.roughness = 0.42;
         if ('metalness' in m) m.metalness = 0.01;
       }
