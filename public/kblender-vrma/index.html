@@ -84,7 +84,8 @@ controls.enablePan = false;
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0xe9fbff, 2.1));
 const key = new THREE.DirectionalLight(0xfff6ea, 2.3); key.position.set(-3, 5, 5); key.castShadow = true; scene.add(key);
-const fill = new THREE.DirectionalLight(0xdffcff, 1.2); fill.position.set(4, 2, 4); scene.add(fill);
+const fill = new THREE.DirectionalLight(0xdffcff, 1.1); fill.position.set(4, 2, 4); scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffd9a8, 1.4); rim.position.set(0, 3, -5); scene.add(rim);
 const floor = new THREE.Mesh(new THREE.CircleGeometry(1.45, 72), new THREE.ShadowMaterial({ color:0x143844, opacity:.12 }));
 floor.position.y = .01; floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
 
@@ -112,7 +113,7 @@ function applyAnimeKurageMaterials(root, outfitTexture, bodyTexture, extra = {})
       seen.add(m.uuid);
       const name = `${mat.name || ''} ${obj.name || ''}`.toLowerCase();
       if (name.includes('hair') || name.includes('kami') || name.includes('head')) {
-        if (m.color) m.color.set(0xe9eef1);
+        if (m.color) m.color.set(0xffffff);
         if ('roughness' in m) m.roughness = 0.52;
         if ('metalness' in m) m.metalness = 0;
       }
@@ -157,7 +158,7 @@ function applyAnimeKurageMaterials(root, outfitTexture, bodyTexture, extra = {})
       }
       if (name.includes('shoes_01_cloth')) {
         if (m.map) m.map = null;
-        if (m.color) m.color.set(0x2fbfae);
+        if (m.color) m.color.set(0x1d8f84);
         if ('outlineWidthMode' in m) m.outlineWidthMode = 'none';
         if ('outlineWidthFactor' in m) m.outlineWidthFactor = 0;
         if ('outlineColorFactor' in m) m.outlineColorFactor.set(0x27a396);
@@ -214,7 +215,7 @@ function attachAnimeKurageStyle(vrm) {
 }
 
 async function loadVRM() {
-  const outfitTexture = await new THREE.TextureLoader().loadAsync('./textures/kurage-outfit-ivory.png?v=20260715c');
+  const outfitTexture = await new THREE.TextureLoader().loadAsync('./textures/kurage-outfit-ivory.png?v=20260715f');
   outfitTexture.colorSpace = THREE.SRGBColorSpace;
   outfitTexture.flipY = false;
   const bodyTexture = await new THREE.TextureLoader().loadAsync('./textures/kurage-body-ivory.png?v=20260715-ivory');
