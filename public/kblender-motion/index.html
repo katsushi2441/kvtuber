@@ -38,9 +38,9 @@
       <div class="eyebrow">Kurage Motion Lab</div>
       <h1>ブラウザで<br><span>動きを確認。</span></h1>
       <div class="rule"></div>
-      <p class="lead">元のKurageさん3Dモデルを読み込み、骨を壊さずに全体モーションで動かします。ボタンで「手を振る」「ジャンプ」「お辞儀」「リアクション」を切り替えできます。</p>
+      <p class="lead">元のKurageさん3Dモデルを使い、ブラウザ上で腕の動きも確認できるようにしました。ボタンで「手を振る」「ジャンプ」「お辞儀」「リアクション」を切り替えできます。</p>
       <div class="buttons" id="buttons"></div>
-      <div class="note">元モデルの雰囲気を保った、軽量なブラウザプレビューです。</div>
+      <div class="note">全体の揺れだけでなく、腕の動きも見えるブラウザプレビューです。</div>
     </section>
     <section class="stage">
       <div class="status" id="motionStatus">loading model...</div>
@@ -60,138 +60,185 @@
     const buttons = document.getElementById('buttons');
     const status = document.getElementById('motionStatus');
     const canvas = document.getElementById('stageCanvas');
-    let currentMotion = 'wave';
+    let activeMotion = 'wave';
     let motionStart = performance.now();
     let avatar = null;
 
     const scene = new THREE.Scene();
     scene.fog = new THREE.Fog(0xf7fbf8, 8, 18);
     const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
-    camera.position.set(0, 1.35, 6.2);
+    camera.position.set(0, 1.28, 6.2);
     camera.lookAt(0, 1.0, 0);
     const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, preserveDrawingBuffer:true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.22;
+    renderer.toneMappingExposure = 1.18;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0xe9fbff, 3.35));
-    const key = new THREE.DirectionalLight(0xffffff, 3.1);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xe9fbff, 3.1));
+    const key = new THREE.DirectionalLight(0xffffff, 3.0);
     key.position.set(-3.5, 5.2, 5.0); key.castShadow = true; scene.add(key);
-    const fill = new THREE.DirectionalLight(0xeaffff, 2.0);
+    const fill = new THREE.DirectionalLight(0xeaffff, 1.8);
     fill.position.set(4, 2, 3); scene.add(fill);
     const front = new THREE.DirectionalLight(0xffffff, 1.2);
     front.position.set(0, 2.5, 5); scene.add(front);
-    const rim = new THREE.DirectionalLight(0x90edff, 1.3);
-    rim.position.set(4, 3, -3); scene.add(rim);
 
-    const shadowMat = new THREE.ShadowMaterial({ color:0x143844, opacity:.14 });
+    const shadowMat = new THREE.ShadowMaterial({ color:0x143844, opacity:.13 });
     const floor = new THREE.Mesh(new THREE.CircleGeometry(1.25, 72), shadowMat);
     floor.position.y = .01; floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
 
+    const modelRoot = new THREE.Group();
+    scene.add(modelRoot);
+
     const loader = new GLTFLoader();
-    const modelUrl = '/previews/kurage-hunyuan3d-mv-textured.glb';
-    loader.load(modelUrl, (gltf) => {
-      avatar = new THREE.Group();
+    loader.load('/previews/kurage-hunyuan3d-mv-textured.glb?v=proxy-arm-20260715', (gltf) => {
       const model = gltf.scene;
       model.traverse((o) => {
         if (!o.isMesh) return;
         o.castShadow = true;
         o.receiveShadow = true;
-        if (o.material) {
-          o.material.needsUpdate = true;
-          if ('roughness' in o.material) o.material.roughness = Math.min(0.72, o.material.roughness ?? 0.55);
-          if ('metalness' in o.material) o.material.metalness = 0;
-          if ('emissive' in o.material) {
-            o.material.emissive = new THREE.Color(0xffffff);
-            o.material.emissiveIntensity = 0.045;
-          }
+        if (!o.material) return;
+        if ('roughness' in o.material) o.material.roughness = Math.min(0.72, o.material.roughness ?? 0.55);
+        if ('metalness' in o.material) o.material.metalness = 0;
+        if ('emissive' in o.material) {
+          o.material.emissive = new THREE.Color(0xffffff);
+          o.material.emissiveIntensity = 0.03;
         }
+        o.material.needsUpdate = true;
       });
       const box = new THREE.Box3().setFromObject(model);
       const size = new THREE.Vector3();
       const center = new THREE.Vector3();
       box.getSize(size); box.getCenter(center);
       model.position.sub(center);
-      const scale = 2.65 / Math.max(size.x, size.y, size.z);
-      model.scale.setScalar(scale);
+      model.scale.setScalar(2.65 / Math.max(size.x, size.y, size.z));
       model.position.y += 1.16;
-      avatar.add(model);
-      scene.add(avatar);
-      setMotion('wave');
+      modelRoot.add(model);
+      avatar = modelRoot;
+      setMotion(activeMotion);
     }, undefined, (err) => {
       console.error(err);
       status.textContent = 'model load failed';
     });
 
-    const accentMat = new THREE.MeshStandardMaterial({ color:0x12c7d8, roughness:.32, metalness:.02, transparent:true, opacity:.7 });
-    const waveRing = new THREE.Group();
-    for (let i=0;i<3;i++) {
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(.10 + i*.055, .006, 8, 32), accentMat);
-      ring.position.set(.62 + i*.12, 1.34 + i*.08, .20);
-      ring.rotation.set(1.0, .25, .45);
-      waveRing.add(ring);
+    const armMat = new THREE.MeshStandardMaterial({ color:0xffe5d4, roughness:.5, metalness:0, transparent:true, opacity:.96 });
+    const cuffMat = new THREE.MeshStandardMaterial({ color:0xdffcff, roughness:.35, metalness:0, transparent:true, opacity:.86 });
+    const accentMat = new THREE.MeshStandardMaterial({ color:0x18c5d7, roughness:.32, metalness:.02 });
+    function part(geo, mat, parent, pos=[0,0,0], rot=[0,0,0], scale=[1,1,1]) {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(...pos); m.rotation.set(...rot); m.scale.set(...scale);
+      m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
     }
-    scene.add(waveRing);
+    function makeArm(side) {
+      const root = new THREE.Group();
+      root.position.set(side * .46, 1.36, .58);
+      const upper = new THREE.Group(); root.add(upper);
+      part(new THREE.CapsuleGeometry(.052, .30, 8, 18), armMat, upper, [0, -.20, 0], [0,0,0], [1,1,1]);
+      part(new THREE.SphereGeometry(.082, 18, 12), cuffMat, upper, [0, .02, 0], [0,0,0], [1.25,.75,1]);
+      const lower = new THREE.Group(); lower.position.set(0, -.38, 0); upper.add(lower);
+      part(new THREE.CapsuleGeometry(.048, .30, 8, 18), armMat, lower, [0, -.18, 0]);
+      part(new THREE.SphereGeometry(.075, 18, 12), armMat, lower, [0, -.38, .015], [0,0,0], [1.1,.9,1]);
+      root.userData.upper = upper;
+      root.userData.lower = lower;
+      root.userData.side = side;
+      scene.add(root);
+      return root;
+    }
+    const leftArm = makeArm(-1);
+    const rightArm = makeArm(1);
 
-    function resetPose() {
-      if (!avatar) return;
-      avatar.position.set(0, 0, 0);
-      avatar.rotation.set(0, 0, 0);
-      avatar.scale.set(1, 1, 1);
-      waveRing.visible = false;
-      floor.scale.set(1, 1, 1);
+    const waveMarks = new THREE.Group();
+    for (let i=0;i<3;i++) {
+      const ring = part(new THREE.TorusGeometry(.10 + i*.055, .006, 8, 32), accentMat, waveMarks, [.68 + i*.12, 1.55 + i*.10, .60], [1.0, .25, .45]);
+      ring.material = accentMat;
     }
-    function animatePose(t) {
-      resetPose();
-      if (!avatar) return;
+    scene.add(waveMarks);
+
+    function resetProxy() {
+      if (avatar) {
+        avatar.position.set(0,0,0); avatar.rotation.set(0,0,0); avatar.scale.set(1,1,1);
+      }
+      leftArm.visible = rightArm.visible = true;
+      waveMarks.visible = false;
+      leftArm.position.set(-.34, 1.40, .56);
+      rightArm.position.set(.34, 1.40, .56);
+      leftArm.rotation.set(0,0,-.24);
+      rightArm.rotation.set(0,0,.24);
+      leftArm.userData.upper.rotation.set(.05,0,0);
+      rightArm.userData.upper.rotation.set(.05,0,0);
+      leftArm.userData.lower.rotation.set(0,0,-.05);
+      rightArm.userData.lower.rotation.set(0,0,.05);
+      floor.scale.set(1,1,1);
+    }
+
+    function animateProxy(t) {
+      resetProxy();
       const s = Math.sin, c = Math.cos;
-      if (currentMotion === 'wave') {
-        avatar.position.y = .035*s(t*4.2);
-        avatar.rotation.y = -.18 + .10*s(t*2.4);
-        avatar.rotation.z = .025*s(t*3.3);
-        waveRing.visible = true;
-        waveRing.position.y = .05*s(t*7.5);
-        waveRing.rotation.z = .2*s(t*6.0);
-      } else if (currentMotion === 'jump') {
+      if (activeMotion === 'wave') {
+        if (avatar) { avatar.rotation.y = -.10 + .04*s(t*2.0); avatar.position.y = .025*s(t*3.8); }
+        rightArm.rotation.z = 1.72 + .24*s(t*7.8);
+        rightArm.rotation.x = -.08;
+        rightArm.userData.lower.rotation.z = .34 + .24*s(t*10.5);
+        rightArm.position.y += .05*s(t*4.0);
+        leftArm.rotation.z = -.26 + .035*s(t*3.0);
+        waveMarks.visible = true;
+        waveMarks.rotation.z = .08*s(t*5.0);
+      } else if (activeMotion === 'jump') {
         const hop = Math.max(0, s(t*5.2));
-        avatar.position.y = hop*.36;
-        avatar.scale.y = 1 - (1-hop)*.025;
-        avatar.rotation.z = .035*s(t*6.2);
-        floor.scale.set(1 + hop*.25, 1 + hop*.25, 1);
-      } else if (currentMotion === 'bow') {
+        if (avatar) { avatar.position.y = hop*.34; avatar.scale.y = 1 - (1-hop)*.025; }
+        leftArm.rotation.z = -.55 - .16*hop;
+        rightArm.rotation.z = .55 + .16*hop;
+        leftArm.userData.lower.rotation.z = -.12 - .06*hop;
+        rightArm.userData.lower.rotation.z = .12 + .06*hop;
+        leftArm.position.y += hop*.18; rightArm.position.y += hop*.18;
+        floor.scale.set(1 + hop*.22, 1 + hop*.22, 1);
+      } else if (activeMotion === 'bow') {
         const phase = (t % 2.8) / 2.8;
         const b = phase < .42 ? (1 - c((phase/.42)*Math.PI))*.5 : phase < .70 ? 1 : Math.max(0, 1 - ((phase-.70)/.30));
-        avatar.rotation.x = .38*b;
-        avatar.position.y = -.05*b;
-      } else if (currentMotion === 'reaction') {
+        if (avatar) { avatar.rotation.x = .34*b; avatar.position.y = -.05*b; }
+        leftArm.rotation.z = -.24 - .10*b;
+        rightArm.rotation.z = .24 + .10*b;
+      } else if (activeMotion === 'reaction') {
         const pop = Math.max(0, s(t*5.8));
-        avatar.position.y = .10*pop;
-        avatar.rotation.y = .20*s(t*5.1);
-        avatar.rotation.z = .045*s(t*7.2);
-        avatar.scale.setScalar(1 + .035*pop);
+        if (avatar) { avatar.position.y = .08*pop; avatar.rotation.y = .17*s(t*5.0); avatar.scale.setScalar(1 + .025*pop); }
+        leftArm.rotation.z = -.40 - .22*pop;
+        rightArm.rotation.z = .40 + .22*pop;
+        leftArm.userData.lower.rotation.z = -.18*pop;
+        rightArm.userData.lower.rotation.z = .18*pop;
       }
+    }
+
+    function setMotion(id) {
+      activeMotion = id;
+      motionStart = performance.now();
+      status.textContent = avatar ? `playing ${id} / moving arms` : 'loading model...';
+      buttons.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.motion === id));
     }
 
     function resize() {
       const r = canvas.parentElement.getBoundingClientRect();
-      renderer.setSize(r.width, r.height, false); camera.aspect = r.width/r.height; camera.updateProjectionMatrix();
+      renderer.setSize(r.width, r.height, false);
+      camera.aspect = r.width / r.height;
+      camera.updateProjectionMatrix();
     }
     new ResizeObserver(resize).observe(canvas.parentElement);
 
-    function setMotion(id) {
-      currentMotion = id; motionStart = performance.now(); status.textContent = avatar ? `playing ${id}` : 'loading model...';
-      buttons.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.motion === id));
-    }
     for (const motion of motions) {
-      const button = document.createElement('button'); button.dataset.motion = motion.id;
+      const button = document.createElement('button');
+      button.dataset.motion = motion.id;
       button.innerHTML = `<span>${motion.label}</span><small>${motion.note}</small>`;
-      button.addEventListener('click', () => setMotion(motion.id)); buttons.appendChild(button);
+      button.addEventListener('click', () => setMotion(motion.id));
+      buttons.appendChild(button);
     }
     setMotion('wave');
-    function tick(now) { animatePose((now-motionStart)/1000); renderer.render(scene, camera); requestAnimationFrame(tick); }
+
+    function tick(now) {
+      animateProxy((now - motionStart) / 1000);
+      renderer.render(scene, camera);
+      requestAnimationFrame(tick);
+    }
     requestAnimationFrame(tick);
   </script>
 </body>
