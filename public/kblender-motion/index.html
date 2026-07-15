@@ -16,128 +16,136 @@
       --white: #ffffff;
     }
     * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
     body {
-      margin: 0;
-      min-height: 100vh;
       color: var(--ink);
       font-family: "Noto Sans JP", "Hiragino Sans", sans-serif;
       background:
         radial-gradient(circle at 18% 16%, rgba(22, 175, 196, .18), transparent 28%),
         radial-gradient(circle at 84% 18%, rgba(246, 183, 60, .14), transparent 24%),
         linear-gradient(135deg, #ffffff 0%, var(--paper) 44%, #eafaf8 100%);
-      overflow: hidden;
+      overflow: auto;
     }
     .shell {
       display: grid;
-      grid-template-columns: minmax(280px, 420px) 1fr;
-      gap: 24px;
-      min-height: 100vh;
-      padding: 30px;
+      grid-template-columns: minmax(260px, 340px) minmax(420px, 1fr);
+      gap: clamp(12px, 1.8vw, 20px);
+      min-height: 100dvh;
+      padding: clamp(10px, 1.8vw, 20px);
     }
     .panel {
       position: relative;
       z-index: 2;
-      align-self: stretch;
-      padding: 28px;
+      padding: clamp(14px, 2vw, 20px);
       border: 1px solid rgba(20, 56, 68, .10);
-      border-radius: 30px;
-      background: rgba(255, 255, 255, .78);
-      box-shadow: 0 24px 70px rgba(20, 56, 68, .13);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, .82);
+      box-shadow: 0 18px 46px rgba(20, 56, 68, .11);
       backdrop-filter: blur(16px);
+      align-self: stretch;
+      overflow: auto;
     }
     .eyebrow {
       color: var(--cyan);
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 900;
-      letter-spacing: .24em;
+      letter-spacing: .22em;
       text-transform: uppercase;
     }
     h1 {
-      margin: 12px 0 14px;
-      font-size: clamp(34px, 5vw, 64px);
-      line-height: .92;
+      margin: 8px 0 10px;
+      font-size: clamp(28px, 4.1vw, 48px);
+      line-height: .94;
       letter-spacing: -.06em;
     }
     h1 span { color: var(--coral); }
     .lead {
-      margin: 0 0 22px;
+      margin: 0 0 12px;
       color: #526b73;
-      font-size: 15px;
-      line-height: 1.85;
+      font-size: clamp(12px, 1.3vw, 14px);
+      line-height: 1.65;
       font-weight: 700;
     }
     .buttons {
       display: grid;
-      gap: 12px;
-      margin-top: 22px;
+      gap: 8px;
+      margin-top: 12px;
     }
     button {
       display: flex;
       align-items: center;
       justify-content: space-between;
       width: 100%;
-      padding: 15px 16px;
+      padding: 10px 12px;
       border: 1px solid rgba(20, 56, 68, .12);
-      border-radius: 18px;
+      border-radius: 14px;
       color: var(--ink);
       background: var(--white);
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 900;
       cursor: pointer;
       transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
     }
     button:hover, button.active {
-      transform: translateY(-2px);
+      transform: translateY(-1px);
       border-color: rgba(22, 175, 196, .65);
-      box-shadow: 0 14px 32px rgba(22, 175, 196, .18);
+      box-shadow: 0 10px 22px rgba(22, 175, 196, .16);
     }
     button small {
       color: var(--cyan);
-      font-size: 11px;
+      font-size: 10px;
       letter-spacing: .14em;
       text-transform: uppercase;
     }
     .stage {
       position: relative;
-      min-height: calc(100vh - 60px);
-      border-radius: 34px;
+      height: calc(100dvh - clamp(20px, 3.6vw, 40px));
+      min-height: 420px;
+      border-radius: 26px;
       border: 1px solid rgba(20, 56, 68, .08);
       background:
         linear-gradient(90deg, rgba(20, 56, 68, .05) 1px, transparent 1px),
         linear-gradient(0deg, rgba(20, 56, 68, .05) 1px, transparent 1px),
         rgba(255, 255, 255, .55);
-      background-size: 74px 74px;
+      background-size: 58px 58px;
       overflow: hidden;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.6), 0 28px 80px rgba(20, 56, 68, .12);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.6), 0 22px 58px rgba(20, 56, 68, .11);
     }
     model-viewer {
       width: 100%;
-      height: calc(100vh - 60px);
-      min-height: 620px;
+      height: 100%;
       --poster-color: transparent;
       background: transparent;
     }
     .status {
       position: absolute;
-      right: 20px;
-      top: 20px;
-      padding: 12px 16px;
-      border-left: 6px solid var(--cyan);
-      border-radius: 14px;
-      background: rgba(255,255,255,.86);
-      box-shadow: 0 12px 30px rgba(20, 56, 68, .10);
+      right: 14px;
+      top: 14px;
+      padding: 10px 13px;
+      border-left: 5px solid var(--cyan);
+      border-radius: 12px;
+      background: rgba(255,255,255,.88);
+      box-shadow: 0 10px 24px rgba(20, 56, 68, .10);
+      font-size: 13px;
       font-weight: 900;
     }
     .rule {
-      width: 92px;
-      height: 7px;
-      margin: 20px 0;
+      width: 72px;
+      height: 6px;
+      margin: 14px 0;
       background: var(--cyan);
     }
+    @media (max-height: 760px) and (min-width: 861px) {
+      .shell { grid-template-columns: 300px minmax(420px, 1fr); }
+      .panel { padding: 14px 16px; }
+      h1 { font-size: clamp(28px, 3.6vw, 42px); }
+      .lead { font-size: 12px; line-height: 1.55; }
+      .rule { margin: 10px 0; }
+      button { padding: 9px 11px; }
+    }
     @media (max-width: 860px) {
-      body { overflow: auto; }
-      .shell { grid-template-columns: 1fr; padding: 16px; }
-      .stage, model-viewer { min-height: 560px; height: 62vh; }
+      .shell { grid-template-columns: 1fr; padding: 12px; }
+      .stage { height: 62dvh; min-height: 420px; }
     }
   </style>
 </head>
@@ -153,14 +161,14 @@
     <section class="stage">
       <div class="status" id="motionStatus">loading wave...</div>
       <model-viewer id="viewer"
-        src="./assets/kurage-motion-wave.glb"
+        src="./assets/kurage-motion-wave.glb?v=20260715b"
         camera-controls
         autoplay
         animation-crossfade-duration="260"
         exposure="1.15"
         shadow-intensity="0.45"
-        camera-orbit="0deg 75deg 7.0m"
-        field-of-view="32deg"
+        camera-orbit="0deg 75deg 8.8m"
+        field-of-view="28deg"
         camera-target="0m 0.65m 0m">
       </model-viewer>
     </section>
@@ -177,7 +185,7 @@
     const status = document.getElementById('motionStatus');
 
     function setMotion(id) {
-      viewer.src = `./assets/kurage-motion-${id}.glb`;
+      viewer.src = `./assets/kurage-motion-${id}.glb?v=20260715b`;
       status.textContent = `loading ${id}...`;
       for (const button of buttons.querySelectorAll('button')) {
         button.classList.toggle('active', button.dataset.motion === id);
