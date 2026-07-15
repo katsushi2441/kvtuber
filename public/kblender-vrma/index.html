@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kurage VRMA Motion Preview</title>
+  <style>
+    :root { --paper:#f7fbf8; --ink:#143844; --cyan:#16afc4; --coral:#ff725e; --white:#fff; }
+    * { box-sizing: border-box; }
+    html, body { margin:0; min-height:100%; }
+    body { color:var(--ink); font-family:"Noto Sans JP","Hiragino Sans",sans-serif; overflow:auto; background:radial-gradient(circle at 18% 16%,rgba(22,175,196,.18),transparent 28%),radial-gradient(circle at 84% 18%,rgba(246,183,60,.14),transparent 24%),linear-gradient(135deg,#fff 0%,var(--paper) 44%,#eafaf8 100%); }
+    .shell { display:grid; grid-template-columns:minmax(260px,340px) minmax(420px,1fr); gap:clamp(12px,1.8vw,20px); min-height:100dvh; padding:clamp(10px,1.8vw,20px); }
+    .panel { position:relative; z-index:2; padding:clamp(14px,2vw,20px); border:1px solid rgba(20,56,68,.10); border-radius:24px; background:rgba(255,255,255,.86); box-shadow:0 18px 46px rgba(20,56,68,.11); backdrop-filter:blur(16px); overflow:auto; }
+    .eyebrow { color:var(--cyan); font-size:11px; font-weight:900; letter-spacing:.22em; text-transform:uppercase; }
+    h1 { margin:8px 0 10px; font-size:clamp(28px,4.1vw,48px); line-height:.94; letter-spacing:-.06em; }
+    h1 span { color:var(--coral); }
+    .rule { width:72px; height:6px; margin:14px 0; background:var(--cyan); }
+    .lead { margin:0 0 12px; color:#526b73; font-size:clamp(12px,1.3vw,14px); line-height:1.65; font-weight:800; }
+    .buttons { display:grid; gap:8px; margin-top:12px; }
+    button { display:flex; align-items:center; justify-content:space-between; width:100%; padding:10px 12px; border:1px solid rgba(20,56,68,.12); border-radius:14px; color:var(--ink); background:var(--white); font-size:14px; font-weight:900; cursor:pointer; transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }
+    button:hover, button.active { transform:translateY(-1px); border-color:rgba(22,175,196,.65); box-shadow:0 10px 22px rgba(22,175,196,.16); }
+    button small { color:var(--cyan); font-size:10px; letter-spacing:.14em; text-transform:uppercase; }
+    .stage { position:relative; height:calc(100dvh - clamp(20px,3.6vw,40px)); min-height:420px; border-radius:26px; border:1px solid rgba(20,56,68,.08); background:linear-gradient(90deg,rgba(20,56,68,.05) 1px,transparent 1px),linear-gradient(0deg,rgba(20,56,68,.05) 1px,transparent 1px),rgba(255,255,255,.55); background-size:58px 58px; overflow:hidden; box-shadow:inset 0 0 0 1px rgba(255,255,255,.6),0 22px 58px rgba(20,56,68,.11); }
+    canvas { display:block; width:100%; height:100%; }
+    .status { position:absolute; right:14px; top:14px; padding:10px 13px; border-left:5px solid var(--cyan); border-radius:12px; background:rgba(255,255,255,.88); box-shadow:0 10px 24px rgba(20,56,68,.10); font-size:13px; font-weight:900; }
+    .note { margin-top:12px; padding:10px 12px; border-radius:14px; background:#f1fbfb; color:#44616a; font-size:12px; line-height:1.55; font-weight:800; }
+    @media (max-height:760px) and (min-width:861px) { .shell{grid-template-columns:300px minmax(420px,1fr);} .panel{padding:14px 16px;} h1{font-size:clamp(28px,3.6vw,42px);} .lead{font-size:12px;line-height:1.55;} .rule{margin:10px 0;} button{padding:9px 11px;} .note{display:none;} }
+    @media (max-width:860px) { .shell{grid-template-columns:1fr;padding:12px;} .stage{height:62dvh;min-height:420px;} }
+  </style>
+  <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.180.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.180.0/examples/jsm/","@pixiv/three-vrm":"https://esm.sh/@pixiv/three-vrm@3.4.4?external=three","@pixiv/three-vrm-animation":"https://esm.sh/@pixiv/three-vrm-animation@3.4.4?external=three,@pixiv/three-vrm"}}</script>
+</head>
+<body>
+  <main class="shell">
+    <section class="panel">
+      <div class="eyebrow">Kurage VRMA Lab</div>
+      <h1>VRMで<br><span>本当に動かす。</span></h1>
+      <div class="rule"></div>
+      <p class="lead">Hunyuan GLBの小細工ではなく、VRMヒューマノイドにText-To-VRMAで生成したVRMAを再生します。腕・肘・脚・頭の骨が実際に動きます。</p>
+      <div class="buttons" id="buttons"></div>
+      <div class="note">土台は動作検証用VRMです。ここでは見た目より、Text-To-VRMAで骨が本当に動くことを確認します。</div>
+    </section>
+    <section class="stage">
+      <div class="status" id="motionStatus">loading VRM...</div>
+      <canvas id="stageCanvas"></canvas>
+    </section>
+  </main>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
+
+const motions = [
+  { id:'wave', label:'手を振る', note:'wave', src:'./motions/wave.vrma' },
+  { id:'jump', label:'ジャンプ', note:'jump', src:'./motions/jump.vrma' },
+  { id:'bow', label:'お辞儀', note:'bow', src:'./motions/bow.vrma' },
+  { id:'reaction', label:'リアクション', note:'reaction', src:'./motions/reaction.vrma' },
+];
+const status = document.getElementById('motionStatus');
+const buttons = document.getElementById('buttons');
+const canvas = document.getElementById('stageCanvas');
+let vrm = null;
+let mixer = null;
+let currentAction = null;
+let currentMotion = 'wave';
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, preserveDrawingBuffer:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xf7fbf8, 8, 18);
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+camera.position.set(0, 1.35, 4.2);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0, 1.05, 0);
+controls.enableDamping = true;
+controls.enablePan = false;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0xe9fbff, 2.6));
+const key = new THREE.DirectionalLight(0xffffff, 2.9); key.position.set(-3, 5, 5); key.castShadow = true; scene.add(key);
+const fill = new THREE.DirectionalLight(0xdffcff, 1.6); fill.position.set(4, 2, 4); scene.add(fill);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(1.45, 72), new THREE.ShadowMaterial({ color:0x143844, opacity:.12 }));
+floor.position.y = .01; floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
+
+const loader = new GLTFLoader();
+loader.register((parser) => new VRMLoaderPlugin(parser));
+loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
+
+
+async function loadVRM() {
+  const gltf = await loader.loadAsync('./models/kurage-vrm-base.vrm');
+  vrm = gltf.userData.vrm;
+  if (!vrm) throw new Error('VRM parse failed');
+  VRMUtils.removeUnnecessaryVertices(gltf.scene);
+  VRMUtils.combineSkeletons(gltf.scene);
+  VRMUtils.rotateVRM0(vrm);
+  vrm.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  scene.add(vrm.scene);
+  mixer = new THREE.AnimationMixer(vrm.scene);
+  const bbox = new THREE.Box3().setFromObject(vrm.scene);
+  const height = Math.max(.8, bbox.max.y - bbox.min.y);
+  controls.target.set(0, height*.54, 0);
+  camera.position.set(0, height*.58, height*1.85);
+  await playMotion('wave');
+}
+
+async function playMotion(id) {
+  currentMotion = id;
+  const motion = motions.find(m => m.id === id) || motions[0];
+  buttons.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.motion === id));
+  if (!vrm) { status.textContent = 'loading VRM...'; return; }
+  status.textContent = `loading ${id}.vrma...`;
+  const buffer = await fetch(`${motion.src}?v=20260715-real-vrma`).then(r => {
+    if (!r.ok) throw new Error(`${motion.src}: ${r.status}`);
+    return r.arrayBuffer();
+  });
+  const gltf = await new Promise((resolve, reject) => loader.parse(buffer, '', resolve, reject));
+  const vrmAnimation = gltf.userData.vrmAnimations?.[0];
+  if (!vrmAnimation) throw new Error('VRMA parse failed');
+  const clip = createVRMAnimationClip(vrmAnimation, vrm);
+  mixer.stopAllAction();
+  currentAction = mixer.clipAction(clip);
+  currentAction.reset();
+  currentAction.setLoop(THREE.LoopRepeat, Infinity);
+  currentAction.clampWhenFinished = false;
+  currentAction.play();
+  status.textContent = `playing ${id} / VRMA on VRM bones`;
+}
+
+function resize() {
+  const r = canvas.parentElement.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false); camera.aspect = r.width/r.height; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(canvas.parentElement);
+for (const motion of motions) {
+  const button = document.createElement('button');
+  button.dataset.motion = motion.id;
+  button.innerHTML = `<span>${motion.label}</span><small>${motion.note}</small>`;
+  button.addEventListener('click', () => playMotion(motion.id).catch(err => { console.error(err); status.textContent = `failed ${motion.id}`; }));
+  buttons.appendChild(button);
+}
+const clock = new THREE.Clock();
+function tick() {
+  const dt = Math.min(clock.getDelta(), 1/20);
+  controls.update();
+  mixer?.update(dt);
+  vrm?.update(dt);
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+loadVRM().catch(err => { console.error(err); status.textContent = 'failed VRM load'; });
+</script>
+</body>
+</html>
