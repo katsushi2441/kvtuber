@@ -40,3 +40,4 @@ assets/
 recordings/
 outputs/
 output/
+!public/kblender-vrma/textures/*.png

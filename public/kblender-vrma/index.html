@@ -82,9 +82,9 @@ controls.target.set(0, 1.05, 0);
 controls.enableDamping = true;
 controls.enablePan = false;
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0xe9fbff, 2.6));
-const key = new THREE.DirectionalLight(0xffffff, 2.9); key.position.set(-3, 5, 5); key.castShadow = true; scene.add(key);
-const fill = new THREE.DirectionalLight(0xdffcff, 1.6); fill.position.set(4, 2, 4); scene.add(fill);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xe9fbff, 2.1));
+const key = new THREE.DirectionalLight(0xfff6ea, 2.3); key.position.set(-3, 5, 5); key.castShadow = true; scene.add(key);
+const fill = new THREE.DirectionalLight(0xdffcff, 1.2); fill.position.set(4, 2, 4); scene.add(fill);
 const floor = new THREE.Mesh(new THREE.CircleGeometry(1.45, 72), new THREE.ShadowMaterial({ color:0x143844, opacity:.12 }));
 floor.position.y = .01; floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
 
@@ -100,7 +100,7 @@ function cloneMaterial(material) {
   return cloned;
 }
 
-function applyAnimeKurageMaterials(root, outfitTexture) {
+function applyAnimeKurageMaterials(root, outfitTexture, bodyTexture, extra = {}) {
   const seen = new Set();
   root.traverse((obj) => {
     if (!obj.isMesh || !obj.material) return;
@@ -112,13 +112,21 @@ function applyAnimeKurageMaterials(root, outfitTexture) {
       seen.add(m.uuid);
       const name = `${mat.name || ''} ${obj.name || ''}`.toLowerCase();
       if (name.includes('hair') || name.includes('kami') || name.includes('head')) {
-        if (m.color) m.color.set(0xdfe8ea);
+        if (m.color) m.color.set(0xe9eef1);
         if ('roughness' in m) m.roughness = 0.52;
         if ('metalness' in m) m.metalness = 0;
       }
-      if (name.includes('eye') || name.includes('iris')) {
-        if (m.color) m.color.set(0x38e692);
-        if ('emissive' in m) { m.emissive = new THREE.Color(0x0dcf9b); m.emissiveIntensity = 0.12; }
+      if (name.includes('eyeiris')) {
+        if (extra.irisTexture) { m.map = extra.irisTexture; }
+        if (m.color) m.color.set(0xffffff);
+        if ('emissive' in m) { m.emissive = new THREE.Color(0x000000); m.emissiveIntensity = 0; }
+      }
+      if (name.includes('face_00_skin')) {
+        if (extra.faceTexture) { m.map = extra.faceTexture; if ('shadeMultiplyTexture' in m) m.shadeMultiplyTexture = extra.faceTexture; }
+        if (m.color) m.color.set(0xffffff);
+      }
+      if (name.includes('hair_00_hair_03')) {
+        if (extra.hair03Texture) { m.map = extra.hair03Texture; if ('shadeMultiplyTexture' in m) m.shadeMultiplyTexture = extra.hair03Texture; }
       }
       if (name.includes('onepice_01_cloth')) {
         if (name.includes('(outline)')) {
@@ -136,16 +144,23 @@ function applyAnimeKurageMaterials(root, outfitTexture) {
         if (m.emissive) m.emissive.set(0x000000);
         if ('outlineWidthMode' in m) m.outlineWidthMode = 'none';
         if ('outlineWidthFactor' in m) m.outlineWidthFactor = 0;
-        if ('outlineColorFactor' in m) m.outlineColorFactor.set(0xa8dbde);
+        if ('outlineColorFactor' in m) m.outlineColorFactor.set(0xb9b4a8);
+        if ('shadeColorFactor' in m) m.shadeColorFactor.set(0xcac5ba);
         if ('roughness' in m) m.roughness = 0.46;
         if ('metalness' in m) m.metalness = 0;
       }
+      if (name.includes('body_00_skin')) {
+        m.map = bodyTexture;
+        if (m.color) m.color.set(0xffffff);
+        if (m.emissive) m.emissive.set(0x000000);
+        if ('shadeMultiplyTexture' in m) m.shadeMultiplyTexture = bodyTexture;
+      }
       if (name.includes('shoes_01_cloth')) {
         if (m.map) m.map = null;
-        if (m.color) m.color.set(0x8fcfd4);
+        if (m.color) m.color.set(0x2fbfae);
         if ('outlineWidthMode' in m) m.outlineWidthMode = 'none';
         if ('outlineWidthFactor' in m) m.outlineWidthFactor = 0;
-        if ('outlineColorFactor' in m) m.outlineColorFactor.set(0x8fcfd4);
+        if ('outlineColorFactor' in m) m.outlineColorFactor.set(0x27a396);
         if ('roughness' in m) m.roughness = 0.42;
         if ('metalness' in m) m.metalness = 0.01;
       }
@@ -199,9 +214,18 @@ function attachAnimeKurageStyle(vrm) {
 }
 
 async function loadVRM() {
-  const outfitTexture = await new THREE.TextureLoader().loadAsync('./textures/kurage-outfit-ernie-a.png?v=20260715-ernie-a');
+  const outfitTexture = await new THREE.TextureLoader().loadAsync('./textures/kurage-outfit-ivory.png?v=20260715c');
   outfitTexture.colorSpace = THREE.SRGBColorSpace;
   outfitTexture.flipY = false;
+  const bodyTexture = await new THREE.TextureLoader().loadAsync('./textures/kurage-body-ivory.png?v=20260715-ivory');
+  bodyTexture.colorSpace = THREE.SRGBColorSpace;
+  bodyTexture.flipY = false;
+  const faceTexture = await new THREE.TextureLoader().loadAsync('./textures/kurage-face-clean.png?v=20260715');
+  faceTexture.colorSpace = THREE.SRGBColorSpace; faceTexture.flipY = false;
+  const irisTexture = await new THREE.TextureLoader().loadAsync('./textures/kurage-iris-green.png?v=20260715b');
+  irisTexture.colorSpace = THREE.SRGBColorSpace; irisTexture.flipY = false;
+  const hair03Texture = await new THREE.TextureLoader().loadAsync('./textures/kurage-hair03-silver.png?v=20260715');
+  hair03Texture.colorSpace = THREE.SRGBColorSpace; hair03Texture.flipY = false;
   const gltf = await loader.loadAsync('./models/kurage-vrm-base.vrm');
   vrm = gltf.userData.vrm;
   if (!vrm) throw new Error('VRM parse failed');
@@ -209,7 +233,7 @@ async function loadVRM() {
   VRMUtils.combineSkeletons(gltf.scene);
   VRMUtils.rotateVRM0(vrm);
   vrm.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  applyAnimeKurageMaterials(vrm.scene, outfitTexture);
+  applyAnimeKurageMaterials(vrm.scene, outfitTexture, bodyTexture, { faceTexture, irisTexture, hair03Texture });
   scene.add(vrm.scene);
   attachAnimeKurageStyle(vrm);
   mixer = new THREE.AnimationMixer(vrm.scene);
