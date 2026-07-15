@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kurage VRMA Motion Preview</title>
+  <title>Anime Kurage VRM Motion Preview</title>
   <style>
     :root { --paper:#f7fbf8; --ink:#143844; --cyan:#16afc4; --coral:#ff725e; --white:#fff; }
     * { box-sizing: border-box; }
@@ -32,12 +32,12 @@
 <body>
   <main class="shell">
     <section class="panel">
-      <div class="eyebrow">Kurage VRMA Lab</div>
-      <h1>VRMで<br><span>本当に動かす。</span></h1>
+      <div class="eyebrow">Anime Kurage VRM v0</div>
+      <h1>アニメKurageさんを<br><span>VRMで動かす。</span></h1>
       <div class="rule"></div>
-      <p class="lead">Hunyuan GLBの小細工ではなく、VRMヒューマノイドにText-To-VRMAで生成したVRMAを再生します。腕・肘・脚・頭の骨が実際に動きます。</p>
+      <p class="lead">指定動画のアニメKurageさんに寄せたVRMヒューマノイドへ、Text-To-VRMAで生成したVRMAを再生します。腕・肘・脚・頭の骨が実際に動きます。</p>
       <div class="buttons" id="buttons"></div>
-      <div class="note">土台は動作検証用VRMです。ここでは見た目より、Text-To-VRMAで骨が本当に動くことを確認します。</div>
+      <div class="note">v0は銀髪・グリーンの瞳・シアン系衣装のVRMをベースに、アニメKurageさんのヘアクリップ要素を軽く足しています。</div>
     </section>
     <section class="stage">
       <div class="status" id="motionStatus">loading VRM...</div>
@@ -64,6 +64,7 @@ let vrm = null;
 let mixer = null;
 let currentAction = null;
 let currentMotion = 'wave';
+let animeKurageParts = null;
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, preserveDrawingBuffer:true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -92,6 +93,82 @@ loader.register((parser) => new VRMLoaderPlugin(parser));
 loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
 
 
+function cloneMaterial(material) {
+  if (!material) return material;
+  const cloned = material.clone ? material.clone() : material;
+  if (cloned) cloned.needsUpdate = true;
+  return cloned;
+}
+
+function applyAnimeKurageMaterials(root) {
+  const seen = new Set();
+  root.traverse((obj) => {
+    if (!obj.isMesh || !obj.material) return;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    const next = mats.map((mat) => {
+      if (!mat) return mat;
+      const key = mat.uuid;
+      const m = seen.has(key) ? mat : cloneMaterial(mat);
+      seen.add(m.uuid);
+      const name = `${mat.name || ''} ${obj.name || ''}`.toLowerCase();
+      if (name.includes('hair') || name.includes('kami') || name.includes('head')) {
+        if (m.color) m.color.set(0xdfe8ea);
+        if ('roughness' in m) m.roughness = 0.52;
+        if ('metalness' in m) m.metalness = 0;
+      }
+      if (name.includes('eye') || name.includes('iris')) {
+        if (m.color) m.color.set(0x38e692);
+        if ('emissive' in m) { m.emissive = new THREE.Color(0x0dcf9b); m.emissiveIntensity = 0.12; }
+      }
+      m.needsUpdate = true;
+      return m;
+    });
+    obj.material = Array.isArray(obj.material) ? next : next[0];
+  });
+}
+
+function makeMat(color, options = {}) {
+  return new THREE.MeshStandardMaterial({ color, roughness:0.42, metalness:0.02, ...options });
+}
+
+function addCapsule(parent, radius, length, material, pos, rot=[0,0,0], scale=[1,1,1]) {
+  const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 8, 20), material);
+  mesh.position.set(...pos); mesh.rotation.set(...rot); mesh.scale.set(...scale);
+  mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+}
+
+function addBox(parent, size, material, pos, rot=[0,0,0]) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
+  mesh.position.set(...pos); mesh.rotation.set(...rot);
+  mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+}
+
+function attachAnimeKurageStyle(vrm) {
+  const cyan = makeMat(0x16c9cf);
+  const pale = makeMat(0xf8ffff, { roughness:0.55 });
+  const emerald = makeMat(0x2ce69c, { emissive:0x087e66, emissiveIntensity:0.08 });
+  const orange = makeMat(0xff7048, { roughness:0.36 });
+  const glass = makeMat(0xa6f7ff, { transparent:true, opacity:0.42, roughness:0.2 });
+  const parts = new THREE.Group();
+  scene.add(parts);
+
+  const headBone = vrm.humanoid?.getNormalizedBoneNode?.('head');
+  const chestBone = vrm.humanoid?.getNormalizedBoneNode?.('chest') || vrm.humanoid?.getNormalizedBoneNode?.('upperChest');
+
+  const headGroup = new THREE.Group();
+  headGroup.name = 'anime-kurage-head-style';
+  headGroup.position.set(0, .08, .01);
+  if (headBone) headBone.add(headGroup); else parts.add(headGroup);
+  // Orange hair clips, matching the anime reference without covering the face.
+  addBox(headGroup, [.075, .018, .024], orange, [-.13, .075, .11], [0, 0, -.28]);
+  addBox(headGroup, [.075, .018, .024], orange, [-.155, .035, .11], [0, 0, -.28]);
+  // A very small translucent Kurage motif, kept behind the silhouette.
+  const halo = new THREE.Mesh(new THREE.TorusGeometry(.13, .005, 8, 48), glass);
+  halo.position.set(0, .13, -.035); halo.rotation.x = Math.PI / 2; halo.scale.set(1.18, .72, 1); headGroup.add(halo);
+
+  animeKurageParts = parts;
+}
+
 async function loadVRM() {
   const gltf = await loader.loadAsync('./models/kurage-vrm-base.vrm');
   vrm = gltf.userData.vrm;
@@ -100,7 +177,9 @@ async function loadVRM() {
   VRMUtils.combineSkeletons(gltf.scene);
   VRMUtils.rotateVRM0(vrm);
   vrm.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  applyAnimeKurageMaterials(vrm.scene);
   scene.add(vrm.scene);
+  attachAnimeKurageStyle(vrm);
   mixer = new THREE.AnimationMixer(vrm.scene);
   const bbox = new THREE.Box3().setFromObject(vrm.scene);
   const height = Math.max(.8, bbox.max.y - bbox.min.y);
