@@ -37,7 +37,7 @@
       <div class="rule"></div>
       <p class="lead">指定動画のアニメKurageさんに寄せたVRMヒューマノイドへ、Text-To-VRMAで生成したVRMAを再生します。腕・肘・脚・頭の骨が実際に動きます。</p>
       <div class="buttons" id="buttons"></div>
-      <div class="note">v0は銀髪・グリーンの瞳・シアン系衣装のVRMをベースに、アニメKurageさんのヘアクリップ要素を軽く足しています。</div>
+      <div class="note">v0は銀髪・グリーンの瞳・白/シアン系の近未来衣装へ寄せたVRMです。黒い服を避け、明るい印象に調整しています。</div>
     </section>
     <section class="stage">
       <div class="status" id="motionStatus">loading VRM...</div>
@@ -70,7 +70,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true, p
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.12;
+renderer.toneMappingExposure = 1.02;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
@@ -111,14 +111,35 @@ function applyAnimeKurageMaterials(root) {
       const m = seen.has(key) ? mat : cloneMaterial(mat);
       seen.add(m.uuid);
       const name = `${mat.name || ''} ${obj.name || ''}`.toLowerCase();
-      if (name.includes('hair') || name.includes('kami') || name.includes('head')) {
-        if (m.color) m.color.set(0xdfe8ea);
-        if ('roughness' in m) m.roughness = 0.52;
+      const color = m.color || null;
+      const lum = color ? (color.r + color.g + color.b) / 3 : 0;
+      const blueDominant = color ? color.b > color.r * 1.08 && color.b > color.g * .78 : false;
+      const likelyHair = name.includes('hair') || name.includes('kami');
+      const likelyEye = name.includes('eye') || name.includes('iris');
+      const likelySkin = /skin/.test(name) || /face_00/.test(name);
+      const likelyCloth = /cloth|onepice|onepiece|costume|tops|wear|sleeve|skirt|dress|uniform|shoes|boots/.test(name);
+      const likelyDarkCloth = lum < .30 && !likelyEye && !likelyHair && !likelySkin;
+      const likelyBlueCloth = blueDominant && lum < .58 && !likelyEye;
+      const likelyClothByName = likelyCloth && !likelySkin && !likelyHair && !likelyEye;
+      const hasDarkTexture = !!m.map && !likelySkin && !likelyHair && !likelyEye;
+
+      if (likelyHair) {
+        if (color) color.set(0xe5edf0);
+        if ('roughness' in m) m.roughness = 0.50;
         if ('metalness' in m) m.metalness = 0;
-      }
-      if (name.includes('eye') || name.includes('iris')) {
-        if (m.color) m.color.set(0x38e692);
+      } else if (likelyEye) {
+        if (color) color.set(0x38e692);
         if ('emissive' in m) { m.emissive = new THREE.Color(0x0dcf9b); m.emissiveIntensity = 0.12; }
+      } else if (likelyDarkCloth || likelyClothByName || hasDarkTexture) {
+        // Keep v0 bright: VRoid sample clothes carry dark trim inside textures.
+        // Drop only color maps so the outfit reads white/cyan while retaining mesh detail.
+        if (m.map && !name.includes('face') && !name.includes('skin')) m.map = null;
+        if (m.roughnessMap) m.roughnessMap = null;
+        if (m.metalnessMap) m.metalnessMap = null;
+        if (color) color.set(name.includes('shoes') ? 0x8eeff2 : (likelyBlueCloth ? 0x20c9d7 : 0xeeffff));
+        if ('roughness' in m) m.roughness = likelyBlueCloth ? 0.38 : 0.44;
+        if ('metalness' in m) m.metalness = likelyBlueCloth ? 0.02 : 0;
+        if ('emissive' in m && likelyBlueCloth) { m.emissive = new THREE.Color(0x0b5f68); m.emissiveIntensity = 0.035; }
       }
       m.needsUpdate = true;
       return m;
