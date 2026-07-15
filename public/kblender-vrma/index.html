@@ -100,7 +100,7 @@ function cloneMaterial(material) {
   return cloned;
 }
 
-function applyAnimeKurageMaterials(root) {
+function applyAnimeKurageMaterials(root, outfitTexture) {
   const seen = new Set();
   root.traverse((obj) => {
     if (!obj.isMesh || !obj.material) return;
@@ -121,8 +121,19 @@ function applyAnimeKurageMaterials(root) {
         if ('emissive' in m) { m.emissive = new THREE.Color(0x0dcf9b); m.emissiveIntensity = 0.12; }
       }
       if (name.includes('onepice_01_cloth')) {
-        if (m.map) m.map = null;
-        if (m.color) m.color.set(0xa8dbde);
+        if (name.includes('(outline)')) {
+          m.visible = false;
+          return m;
+        }
+        m.map = outfitTexture;
+        m.alphaMap = null;
+        m.emissiveMap = null;
+        m.normalMap = null;
+        m.transparent = false;
+        m.opacity = 1;
+        m.alphaTest = 0;
+        if (m.color) m.color.set(0xffffff);
+        if (m.emissive) m.emissive.set(0x000000);
         if ('outlineWidthMode' in m) m.outlineWidthMode = 'none';
         if ('outlineWidthFactor' in m) m.outlineWidthFactor = 0;
         if ('outlineColorFactor' in m) m.outlineColorFactor.set(0xa8dbde);
@@ -188,6 +199,9 @@ function attachAnimeKurageStyle(vrm) {
 }
 
 async function loadVRM() {
+  const outfitTexture = await new THREE.TextureLoader().loadAsync('./textures/kurage-outfit-ernie-a.png');
+  outfitTexture.colorSpace = THREE.SRGBColorSpace;
+  outfitTexture.flipY = false;
   const gltf = await loader.loadAsync('./models/kurage-vrm-base.vrm');
   vrm = gltf.userData.vrm;
   if (!vrm) throw new Error('VRM parse failed');
@@ -195,7 +209,7 @@ async function loadVRM() {
   VRMUtils.combineSkeletons(gltf.scene);
   VRMUtils.rotateVRM0(vrm);
   vrm.scene.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-  applyAnimeKurageMaterials(vrm.scene);
+  applyAnimeKurageMaterials(vrm.scene, outfitTexture);
   scene.add(vrm.scene);
   attachAnimeKurageStyle(vrm);
   mixer = new THREE.AnimationMixer(vrm.scene);

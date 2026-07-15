@@ -15,6 +15,8 @@ Files:
 
 - `models/kurage-vrm-base.vrm`: VRoid Studio sample model copied from the local kblender asset pack (`AvatarSample_F.vrm`).
 - `motions/*.vrma`: generated with `/home/kojima/work/kblender/scripts/generate_kurage_vrma_preview_motions.mjs` using `vendor/text-to-vrma/src/vrmaBuilder.js`.
+- `concepts/ernie-kurage-outfit-a.png`: ERNIE-Image-Turbo reference for the clean aqua, ivory, and warm-gray outfit direction.
+- `textures/kurage-outfit-ernie-a.png`: opaque VRM clothing texture using the ERNIE reference palette without the original black or emissive treatment.
 
 Reference for the VRoid sample model pack:
 
