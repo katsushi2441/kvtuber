@@ -37,6 +37,9 @@ public/avatar3d/generated/
 
 # Local private assets and generated captures.
 assets/
+!landing/assets/
+!landing/assets/kurage-avatar.webp
+!landing/assets/ogp.png
 recordings/
 outputs/
 output/
