@@ -68,6 +68,23 @@ Open:
 - normal viewer: `http://localhost:18308/viewer`
 - broadcast viewer: `http://localhost:18308/viewer?broadcast=1`
 
+## Public Introduction Site
+
+The bilingual static product introduction lives separately from the Vite runtime so the
+public landing page cannot replace or break the application entry point:
+
+```text
+landing/index.html       English
+landing/kvtuber.html     Japanese
+landing/styles.css       shared White Studio design
+```
+
+Deploy it to `kvtuber.exbridge.jp` with:
+
+```bash
+bash scripts/deploy_landing.sh
+```
+
 Viewer roles:
 
 - `/viewer` is the normal viewer. Use it for ordinary viewing, autonomous talking checks, and non-OBS interaction.
