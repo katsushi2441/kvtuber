@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>kfreqai 3D CM background capture (720x1280, deterministic frame stepping)</title>
+<style>html,body{margin:0;padding:0;overflow:hidden;background:#f7fbf8}#c{display:block}</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+  "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3/lib/three-vrm.module.min.js",
+  "@pixiv/three-vrm-animation": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm-animation@3/lib/three-vrm-animation.module.min.js"
+} }
+</script>
+</head>
+<body>
+<canvas id="c" width="720" height="1280"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
+
+const W = 720, H = 1280, FPS = 24, DURATION = 15;
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(W, H, false);
+renderer.setPixelRatio(1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf7fbf8);
+scene.fog = new THREE.Fog(0xf7fbf8, 8, 18);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xe9fbff, 2.1));
+const key = new THREE.DirectionalLight(0xfff6ea, 2.3); key.position.set(-3, 5, 5); scene.add(key);
+const fill = new THREE.DirectionalLight(0xdffcff, 1.1); fill.position.set(4, 2, 4); scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffd9a8, 1.4); rim.position.set(0, 3, -5); scene.add(rim);
+
+// 縦構図: バストアップ〜膝上でキャラを大きく
+const camera = new THREE.PerspectiveCamera(28, W / H, 0.1, 40);
+
+const loader = new GLTFLoader();
+loader.register((p) => new VRMLoaderPlugin(p));
+loader.register((p) => new VRMAnimationLoaderPlugin(p));
+
+const texLoader = new THREE.TextureLoader();
+async function tex(url) { const t = await texLoader.loadAsync(url); t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; return t; }
+
+function applyColors(root, maps) {
+  root.traverse((obj) => {
+    if (!obj.isMesh || !obj.material) return;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    mats.forEach((m) => {
+      const name = `${m.name || ''} ${obj.name || ''}`.toLowerCase();
+      if (name.includes('hair') || name.includes('kami')) { if (m.color) m.color.set(0xffffff); }
+      if (name.includes('eyeiris')) { m.map = maps.iris; if (m.color) m.color.set(0xffffff); }
+      if (name.includes('face_00_skin')) { m.map = maps.face; if ('shadeMultiplyTexture' in m) m.shadeMultiplyTexture = maps.face; if (m.color) m.color.set(0xffffff); }
+      if (name.includes('hair_00_hair_03')) { m.map = maps.hair03; if ('shadeMultiplyTexture' in m) m.shadeMultiplyTexture = maps.hair03; }
+      if (name.includes('body_00_skin')) { m.map = maps.body; if ('shadeMultiplyTexture' in m) m.shadeMultiplyTexture = maps.body; if (m.color) m.color.set(0xffffff); }
+      if (name.includes('onepice_01_cloth')) {
+        if (name.includes('(outline)')) { m.visible = false; return; }
+        m.map = maps.outfit; m.alphaMap = null; m.emissiveMap = null; m.normalMap = null;
+        m.transparent = false; m.opacity = 1; m.alphaTest = 0;
+        if (m.color) m.color.set(0xffffff);
+        if (m.emissive) m.emissive.set(0x000000);
+        if ('outlineWidthMode' in m) m.outlineWidthMode = 'none';
+        if ('shadeColorFactor' in m) m.shadeColorFactor.set(0xcac5ba);
+      }
+      if (name.includes('shoes_01_cloth')) {
+        if (m.map) m.map = null;
+        if (m.color) m.color.set(0x1d8f84);
+        if ('outlineWidthMode' in m) m.outlineWidthMode = 'none';
+      }
+      m.needsUpdate = true;
+    });
+  });
+}
+
+const state = { ready: false, frame: -1 };
+window.__cap = state;
+
+const MOTIONS = ['wave', 'reaction', 'bow', 'jump', 'wave'];
+const BEATS = [0, 2.7, 5.8, 9.1, 12.2, 15.0];  // コンポジションのシーン切替と同期
+
+async function boot() {
+  const maps = {
+    outfit: await tex('./textures/kurage-outfit-ivory.png'),
+    body: await tex('./textures/kurage-body-ivory.png'),
+    face: await tex('./textures/kurage-face-clean.png'),
+    iris: await tex('./textures/kurage-iris-green.png'),
+    hair03: await tex('./textures/kurage-hair03-silver.png'),
+  };
+  const gltf = await loader.loadAsync('./models/kurage-vrm-base.vrm');
+  const vrm = gltf.userData.vrm;
+  VRMUtils.rotateVRM0(vrm);
+  scene.add(vrm.scene);
+  applyColors(vrm.scene, maps);
+
+  const clips = {};
+  for (const nm of ['wave', 'jump', 'bow', 'reaction']) {
+    const g = await loader.loadAsync(`./motions/${nm}.vrma`);
+    const anim = g.userData.vrmAnimations && g.userData.vrmAnimations[0];
+    if (anim) clips[nm] = createVRMAnimationClip(anim, vrm);
+  }
+
+  const mixer = new THREE.AnimationMixer(vrm.scene);
+  let current = null;
+  function playSegment(i) {
+    if (current) current.stop();
+    const clip = clips[MOTIONS[i]];
+    const action = mixer.clipAction(clip);
+    action.reset(); action.setLoop(THREE.LoopRepeat, Infinity); action.play();
+    current = action;
+  }
+
+  // 頭のあたりを狙うバストアップ気味の縦構図
+  const head = vrm.humanoid.getNormalizedBoneNode('head');
+  const headY = head.getWorldPosition(new THREE.Vector3()).y;
+  camera.position.set(0, headY - 0.22, 3.05);
+  camera.lookAt(0, headY - 0.28, 0);
+
+  let seg = -1;
+  window.__renderFrame = (frame) => {
+    const t = frame / FPS;
+    const want = BEATS.findIndex((b, i) => t >= b && t < BEATS[i + 1]);
+    if (want !== seg) { seg = want; playSegment(seg); mixer.setTime(0); }
+    // セグメント内の経過時間で決定論的に進める
+    mixer.setTime(t - BEATS[seg]);
+    vrm.update(1 / FPS);
+    // ゆっくりしたカメラの寄り(15秒で2%)
+    const p = t / DURATION;
+    camera.position.z = 3.05 - 0.35 * p;
+    camera.updateProjectionMatrix();
+    renderer.render(scene, camera);
+    state.frame = frame;
+    return true;
+  };
+  state.ready = true;
+}
+boot();
+</script>
+</body>
+</html>
